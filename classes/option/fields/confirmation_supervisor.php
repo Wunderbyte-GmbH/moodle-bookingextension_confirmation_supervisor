@@ -24,6 +24,7 @@
  */
 namespace bookingextension_confirmation_supervisor\option\fields;
 
+use mod_booking\booking_option;
 use mod_booking\booking_option_settings;
 use mod_booking\option\fields_info;
 use mod_booking\option\field_base;
@@ -109,9 +110,64 @@ class confirmation_supervisor extends field_base {
         $returnvalue = null
     ): array {
 
+        if (
+            isset($formdata->waitforconfirmation)
+        ) {
+            booking_option::add_data_to_json($newoption, "confirmationsupervisorenabled", $formdata->confirmationsupervisorenabled);
+        }
+        $instance = new confirmation_supervisor();
+        $mockdata = new stdClass();
+        $mockdata->id = $formdata->id;
+        $changes = $instance->check_for_changes($formdata, $instance, $mockdata);
+        return $changes;
+    }
+
+    /**
+     * Check if there is a difference between the former and the new values of the formdata.
+     *
+     * @param stdClass $formdata
+     * @param field_base $self
+     * @param mixed $mockdata // Only needed if there the object needs params for the save_data function.
+     * @param string $key
+     * @param mixed $value
+     *
+     * @return array
+     *
+     */
+    public function check_for_changes(
+        stdClass $formdata,
+        field_base $self,
+        $mockdata = '',
+        string $key = '',
+        $value = ''
+    ): array {
+
+        if (!isset($self)) {
+            return [];
+        }
+
         $changes = [];
 
-        return $changes;
+        $excludeclassesfromtrackingchanges = MOD_BOOKING_CLASSES_EXCLUDED_FROM_CHANGES_TRACKING;
+
+        $classname = fields_info::get_class_name(static::class);
+        if (in_array($classname, $excludeclassesfromtrackingchanges)) {
+            return $changes;
+        }
+
+        $newvalue = $formdata->confirmationsupervisorenabled;
+        $oldvalue = booking_option::get_value_of_json_by_key($formdata->id, "confirmationsupervisorenabled");
+
+        if ($newvalue != $oldvalue) {
+            $changes = [
+                'changes' => [
+                    'fieldname' => 'confirmation_supervisor',
+                    'formkey' => 'confirmationsupervisorenabled',
+                ],
+            ];
+        }
+
+        return [];
     }
 
     /**
@@ -147,12 +203,12 @@ class confirmation_supervisor extends field_base {
 
         $mform->addElement(
             'select',
-            'confirmation_supervisor_enabled_in_option',
+            'confirmationsupervisorenabled',
             get_string('confirmationsupervisorenabled', 'bookingextension_confirmation_supervisor'),
             $options,
             0
         );
-        $mform->hideIf('confirmation_supervisor_enabled_in_option', 'waitforconfirmation', 'neq', 1);
+        $mform->hideIf('confirmationsupervisorenabled', 'waitforconfirmation', 'neq', 1);
         $mform->addElement(
             'static',
             'waitforconfirmationdescription',
@@ -183,6 +239,15 @@ class confirmation_supervisor extends field_base {
      *
      */
     public static function set_data(stdClass &$data, booking_option_settings $settings) {
+        if (!empty($data->importing)) {
+            $data->confirmationsupervisorenabled = $data->confirmationsupervisorenabled
+                ?? booking_option::get_value_of_json_by_key($data->id, "confirmationsupervisorenabled") ?? 0;
+        } else {
+            $confirmationsupervisorenabled = booking_option::get_value_of_json_by_key($data->id, "confirmationsupervisorenabled");
+            if (!empty($confirmationsupervisorenabled)) {
+                $data->confirmationsupervisorenabled = $confirmationsupervisorenabled;
+            }
+        }
     }
 
     /**

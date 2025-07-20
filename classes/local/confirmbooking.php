@@ -79,4 +79,107 @@ class confirmbooking implements confirmbooking_interface {
     public function get_description(): string {
         return get_string('workflowdescription', 'bookingextension_confirmation_supervisor');
     }
+
+    /**
+     * This returns the sql corresponding to the right settings.
+     * When adding params, make sure the don't interfer.
+     * Prefix them with bec (bookingextension_confirmation), eg bectuserid or becsuserid.
+     * @param array $params
+     *
+     * @return string
+     *
+     */
+    public function return_where_sql(array &$params): string {
+        $sql = '';
+
+        global $DB;
+
+        $driver = $DB->get_dbfamily();
+
+        switch ($driver) {
+            case 'postgres':
+                $sql = $this->return_where_sql_postgres($params);
+                break;
+            case 'mysql':
+                $sql = $this->return_where_sql_mysql($params);
+                break;
+            default: // Fallback.
+                throw new \moodle_exception('Unsupported DB driver: ' . $driver);
+        }
+
+        return $sql;
+    }
+
+    /**
+     * This returns the sql corresponding to the right settings.
+     * When adding params, make sure the don't interfer.
+     * Prefix them with bec (bookingextension_confirmation), eg bectuserid or becsuserid.
+     * @param array $params
+     *
+     * @return string
+     *
+     */
+    public function return_where_sql_postgres(array &$params): string {
+
+        global $USER;
+
+        // The logic needs to be like this:
+
+        // Depending on the chosen setting in the column json,
+        // we either verify that the current user is a supervisor
+        // or the user is a HR
+        // and we need first confirmation
+        // or we need second confirmation
+
+        // Actually, i guess supervisors should see the need for confirmation from HR and HR from supervisor
+        // so probably that should not even be an issue.
+
+        // So we just need to make sure the user is allowed to see the settings.
+        // The supervisor confirmation goes on hr, supervisorfield and deputy field.
+        // The trainer approval goes on being trainer for a given booking option.
+        // (might also need to check the context capabilities on all booking instances, when we think of it);
+
+        $supervisorfieldshortname = get_config('bookingextension_confirmation_supervisor', 'supervisor');
+        if (!empty($supervisorfieldshortname)) {
+            $sql = " ( bo.json::jsonb ->> 'waitforconfirmation' = '1'
+                    AND bo.json::jsonb ->> 'confirmationsupervisorenabled' > '0' )
+                    AND EXISTS (
+                        SELECT 1
+                        FROM {user_info_data} uid
+                        JOIN {user_info_field} uif ON uid.fieldid = uif.id
+                        WHERE uif.shortname = :becssupervisorfieldshortname
+                        AND uid.userid = u.id
+                        AND (
+                            ',' || uid.data || ',' LIKE '%,' || :becssupervisorid || ',%'
+                        )
+                    )";
+        }
+
+        $params['becssupervisorid'] = $USER->id;
+        $params['becssupervisorfieldshortname'] = $supervisorfieldshortname;
+
+        return $sql;
+    }
+
+    /**
+     * This returns the sql corresponding to the right settings.
+     * When adding params, make sure the don't interfer.
+     * Prefix them with bec (bookingextension_confirmation), eg bectuserid or becsuserid.
+     * @param array $params
+     *
+     * @return string
+     *
+     */
+    public function return_where_sql_mysql(array &$params): string {
+        return " ( JSON_UNQUOTE(JSON_EXTRACT(bo.json, '$.waitforconfirmation')) = '1'
+                AND CAST(JSON_UNQUOTE(JSON_EXTRACT(bo.json, '$.confirmationsupervisorenabled')) AS UNSIGNED) > 0
+                AND EXISTS (
+                    SELECT 1
+                    FROM {user_info_data} uid
+                    JOIN {user_info_field} uif ON uid.fieldid = uif.id
+                    WHERE uif.shortname = :supervisorfieldshortname
+                    AND uid.userid = u.id
+                    AND FIND_IN_SET(:currentuserid, uid.data) > 0
+                )";
+    }
 }
