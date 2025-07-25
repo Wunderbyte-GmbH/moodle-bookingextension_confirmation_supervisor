@@ -45,19 +45,75 @@ class confirmbooking implements confirmbooking_interface {
      *
      */
     public static function has_capability_to_confirm_booking(int $optionid, int $approverid, int $userid): array {
-
+        global $USER, $DB;
         $approved = false;
         $message = get_string('notallowedtoconfirm', 'bookingextension_confirmation_supervisor');
         $reload = false;
 
         $settings = singleton_service::get_instance_of_booking_option_settings($optionid);
         $context = context_module::instance($settings->cmid);
-        if (has_capability('mod/booking:bookforothers', $context)) {
-            $approved = true;
-            $message = '';
+        if (!has_capability('mod/booking:bookforothers', $context)) {
+            return [$approved, $message, $reload]; // Can not approve.
         }
 
-        return [$approved, $message, $reload];
+        $bookinganswers = singleton_service::get_instance_of_booking_answers($settings);
+        $bookinganswer = ($bookinganswers->get_usersonwaitinglist())[$userid];
+        $confirmationcount = (!empty($bookinganswer->json)) ?
+            (json_decode($bookinganswer->json))->confirmationcount ?? 0 : 0;
+
+        $bosettings = singleton_service::get_instance_of_booking_option_settings($optionid);
+        $confirmationsupervisorenabled = (int) $bosettings->jsonobject->confirmationsupervisorenabled;
+
+        // Check if user is HR. We need to check bookig extension configuration.
+        $hrids = explode(
+            ',',
+            get_config('bookingextension_confirmation_supervisor', 'confirmation_supervisor_hrusers')
+        );
+
+        $ishr = in_array($USER->id, $hrids);
+
+        if ($ishr) {
+            // We need to check value of confirmationsupervisorenabled. HR should see 2, 3, 4.
+            // For type 2 (HR → supervisor), show only if confirmationcount = 0 in booking answer record.
+            // For type 4 (supervisor → HR), show only if confirmationcount = 1 in booking answer record.
+            if (!in_array($confirmationsupervisorenabled, [2, 3, 4])) {
+                return [$approved, $message, $reload]; // Can not approve.
+            }
+
+            if ($confirmationsupervisorenabled === 2 && $confirmationcount != 0) {
+                return [$approved, $message, $reload]; // Can not approve.
+            }
+
+            if ($confirmationsupervisorenabled === 4 && $confirmationcount != 1) {
+                return [$approved, $message, $reload]; // Can not approve.
+            }
+        } else {
+            // Check if user user is supervisor for the related user of the booking answer record,
+            // then check if allowed to confirm, and check if his/her right in confirmation order.
+            $supervisorfieldshortname = get_config('bookingextension_confirmation_supervisor', 'supervisor');
+            $user = singleton_service::get_instance_of_user($userid, true);
+            if (!$user || !isset($user->profile[$supervisorfieldshortname]) || $user->profile[$supervisorfieldshortname] != $approverid) {
+                return [$approved, $message, $reload]; // Can not approve.
+            }
+            // We need to check value of confirmationsupervisorenabled. HR should see 1, 2, 4.
+            // For type 2 (HR → supervisor), show only if confirmationcount = 1 in booking answer record.
+            // For type 4 (supervisor → HR), show only if confirmationcount = 0 in booking answer record.
+            if (!in_array($confirmationsupervisorenabled, [1, 2, 4])) {
+                return [$approved, $message, $reload]; // Can not approve.
+            }
+
+            if ($confirmationsupervisorenabled === 2 && $confirmationcount != 1) {
+                return [$approved, $message, $reload]; // Can not approve.
+            }
+
+            if ($confirmationsupervisorenabled === 4 && $confirmationcount != 0) {
+                return [$approved, $message, $reload]; // Can not approve.
+            }
+        }
+
+        $approved = true;
+        $message = '';
+        return [$approved, $message, $reload]; // Can approve.
     }
 
     /**
@@ -159,22 +215,26 @@ class confirmbooking implements confirmbooking_interface {
             // Extra rule: For type 2 (supervisor → HR), show only if confirmationcount = 0.
             // Extra rule: For type 4 (supervisor → HR), show only if confirmationcount = 1.
             $stepcondition = "(
-                bo.json::jsonb ->> 'confirmationsupervisorenabled' = '3'
+                (
+                    bo.json::jsonb ->> 'confirmationsupervisorenabled' = '3'
+                )
                 OR
                 (
                     (bo.json::jsonb ->> 'confirmationsupervisorenabled') = '2'
                     AND
-                    (
-                        (ba.json IS NULL)
-                        OR
-                        (ba.json::jsonb ->> 'confirmationcount') = '0'
-                    )
+                    (ba.json::jsonb ->> 'confirmationcount')::int = 0
+                )
+                OR
+                (
+                    (bo.json::jsonb ->> 'confirmationsupervisorenabled') = '2'
+                    AND
+                    (ba.json IS NULL)
                 )
                 OR
                 (
                     (bo.json::jsonb ->> 'confirmationsupervisorenabled') = '4'
                     AND
-                    (ba.json::jsonb ->> 'confirmationcount') = '1'
+                    (ba.json::jsonb ->> 'confirmationcount')::int = 1
                 )
             )";
 
@@ -204,11 +264,13 @@ class confirmbooking implements confirmbooking_interface {
                 (
                     (bo.json::jsonb ->> 'confirmationsupervisorenabled') = '4'
                     AND
-                    (
-                        (ba.json IS NULL)
-                        OR
-                        (ba.json::jsonb ->> 'confirmationcount') = '0'
-                    )
+                    (ba.json::jsonb ->> 'confirmationcount')::int = 0
+                )
+                OR
+                (
+                    (bo.json::jsonb ->> 'confirmationsupervisorenabled') = '4'
+                    AND
+                    (ba.json IS NULL)
                 )
             )";
 
