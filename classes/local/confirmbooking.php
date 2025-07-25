@@ -156,19 +156,29 @@ class confirmbooking implements confirmbooking_interface {
 
         if ($ishr) {
             // HR should see 2, 3, 4.
-            $conflevel = "bo.json::jsonb ->> 'confirmationsupervisorenabled' IN ('2','3','4')";
+            // Extra rule: For type 2 (supervisor → HR), show only if confirmationcount = 0.
             // Extra rule: For type 4 (supervisor → HR), show only if confirmationcount = 1.
             $stepcondition = "(
-                bo.json::jsonb ->> 'confirmationsupervisorenabled' IN ('2','3')
+                bo.json::jsonb ->> 'confirmationsupervisorenabled' = '3'
+                OR
+                (
+                    (bo.json::jsonb ->> 'confirmationsupervisorenabled') = '2'
+                    AND
+                    (
+                        (ba.json IS NULL)
+                        OR
+                        (ba.json::jsonb ->> 'confirmationcount') = '0'
+                    )
+                )
                 OR
                 (
                     (bo.json::jsonb ->> 'confirmationsupervisorenabled') = '4'
                     AND
-                    (ba.json::jsonb ->> 'confirmationcount')::int = 1
+                    (ba.json::jsonb ->> 'confirmationcount') = '1'
                 )
             )";
 
-            return "$waitforconfirmation AND $conflevel AND $stepcondition";
+            return "$waitforconfirmation AND $stepcondition";
         } else {
             // Supervisors should see 1, 2, 4 — but only if they're linked via profile field.
             $conflevel = "bo.json::jsonb ->> 'confirmationsupervisorenabled' IN ('1','2','4')";
@@ -183,12 +193,22 @@ class confirmbooking implements confirmbooking_interface {
 
             // Extra rule: For type 2 (HR → Supervisor), show only if confirmationcount = 1.
             $stepcondition = "(
-                bo.json::jsonb ->> 'confirmationsupervisorenabled' IN ('1','4')
+                bo.json::jsonb ->> 'confirmationsupervisorenabled' = '1'
                 OR
                 (
                     (bo.json::jsonb ->> 'confirmationsupervisorenabled') = '2'
                     AND
                     (ba.json::jsonb ->> 'confirmationcount')::int = 1
+                )
+                OR
+                (
+                    (bo.json::jsonb ->> 'confirmationsupervisorenabled') = '4'
+                    AND
+                    (
+                        (ba.json IS NULL)
+                        OR
+                        (ba.json::jsonb ->> 'confirmationcount') = '0'
+                    )
                 )
             )";
 
@@ -220,21 +240,25 @@ class confirmbooking implements confirmbooking_interface {
         $waitforconfirmation = "CAST(JSON_UNQUOTE(JSON_EXTRACT(bo.json, '$.waitforconfirmation')) AS UNSIGNED) > 0";
 
         if ($ishr) {
-            // HR should see 2, 3, 4
-            $conflevel = "CAST(JSON_UNQUOTE(JSON_EXTRACT(bo.json, '$.confirmationsupervisorenabled')) AS UNSIGNED) IN (2,3,4)";
-
-            // Type 4: HR sees it only if confirmationcount == 1
+            // HR should see 2, 3, 4.
             $stepcondition = "(
-                CAST(JSON_UNQUOTE(JSON_EXTRACT(bo.json, '$.confirmationsupervisorenabled')) AS UNSIGNED) IN (2,3)
+                CAST(JSON_UNQUOTE(JSON_EXTRACT(bo.json, '$.confirmationsupervisorenabled')) AS UNSIGNED) = 3
+                OR (
+                    CAST(JSON_UNQUOTE(JSON_EXTRACT(bo.json, '$.confirmationsupervisorenabled')) AS UNSIGNED) = 2
+                    AND (
+                        ba.json IS NULL
+                        OR CAST(JSON_UNQUOTE(JSON_EXTRACT(ba.json, '$.confirmationcount')) AS UNSIGNED) = 0
+                    )
+                )
                 OR (
                     CAST(JSON_UNQUOTE(JSON_EXTRACT(bo.json, '$.confirmationsupervisorenabled')) AS UNSIGNED) = 4
                     AND CAST(JSON_UNQUOTE(JSON_EXTRACT(ba.json, '$.confirmationcount')) AS UNSIGNED) = 1
                 )
             )";
 
-            return "($waitforconfirmation AND $conflevel AND $stepcondition)";
+            return "($waitforconfirmation AND $stepcondition)";
         } else {
-            // Supervisor should see 1, 2, 4 — but must be in the custom profile field.
+            // Supervisors should see 1, 2, 4 — but must be in the profile field.
             $conflevel = "CAST(JSON_UNQUOTE(JSON_EXTRACT(bo.json, '$.confirmationsupervisorenabled')) AS UNSIGNED) IN (1,2,4)";
 
             $supervisorcond = "EXISTS (
@@ -247,10 +271,17 @@ class confirmbooking implements confirmbooking_interface {
             )";
 
             $stepcondition = "(
-                CAST(JSON_UNQUOTE(JSON_EXTRACT(bo.json, '$.confirmationsupervisorenabled')) AS UNSIGNED) IN (1,4)
+                CAST(JSON_UNQUOTE(JSON_EXTRACT(bo.json, '$.confirmationsupervisorenabled')) AS UNSIGNED) = 1
                 OR (
                     CAST(JSON_UNQUOTE(JSON_EXTRACT(bo.json, '$.confirmationsupervisorenabled')) AS UNSIGNED) = 2
                     AND CAST(JSON_UNQUOTE(JSON_EXTRACT(ba.json, '$.confirmationcount')) AS UNSIGNED) = 1
+                )
+                OR (
+                    CAST(JSON_UNQUOTE(JSON_EXTRACT(bo.json, '$.confirmationsupervisorenabled')) AS UNSIGNED) = 4
+                    AND (
+                        ba.json IS NULL
+                        OR CAST(JSON_UNQUOTE(JSON_EXTRACT(ba.json, '$.confirmationcount')) AS UNSIGNED) = 0
+                    )
                 )
             )";
 
