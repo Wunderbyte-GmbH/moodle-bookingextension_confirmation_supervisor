@@ -152,16 +152,27 @@ class confirmbooking implements confirmbooking_interface {
         $params['becssupervisorfieldshortname'] = $supervisorfieldshortname;
 
          // Core JSON confirmation field.
-        $waitforconfirmation = "(bo.json::jsonb ->> 'waitforconfirmation' = '1'";
+        $waitforconfirmation = "bo.json::jsonb ->> 'waitforconfirmation' > '0'";
 
         if ($ishr) {
             // HR should see 2, 3, 4.
-            $conflevel = "bo.json::jsonb ->> 'confirmationsupervisorenabled' IN ('2','3','4'))";
-            $supervisorcond = "";
+            $conflevel = "bo.json::jsonb ->> 'confirmationsupervisorenabled' IN ('2','3','4')";
+            // Extra rule: For type 4 (supervisor → HR), show only if confirmationcount = 1.
+            $stepcondition = "(
+                bo.json::jsonb ->> 'confirmationsupervisorenabled' IN ('2','3')
+                OR
+                (
+                    (bo.json::jsonb ->> 'confirmationsupervisorenabled') = '4'
+                    AND
+                    (ba.json::jsonb ->> 'confirmationcount')::int = 1
+                )
+            )";
+
+            return "$waitforconfirmation AND $conflevel AND $stepcondition";
         } else {
             // Supervisors should see 1, 2, 4 — but only if they're linked via profile field.
-            $conflevel = "bo.json::jsonb ->> 'confirmationsupervisorenabled' IN ('1','2','4'))";
-            $supervisorcond = " AND EXISTS (
+            $conflevel = "bo.json::jsonb ->> 'confirmationsupervisorenabled' IN ('1','2','4')";
+            $supervisorcond = "EXISTS (
                 SELECT 1
                 FROM {user_info_data} uid
                 JOIN {user_info_field} uif ON uid.fieldid = uif.id
@@ -169,9 +180,20 @@ class confirmbooking implements confirmbooking_interface {
                 AND uid.userid = u.id
                 AND (',' || uid.data || ',' LIKE '%,' || :becssupervisorid || ',%')
             )";
-        }
 
-        return "$waitforconfirmation AND $conflevel $supervisorcond";
+            // Extra rule: For type 2 (HR → Supervisor), show only if confirmationcount = 1.
+            $stepcondition = "(
+                bo.json::jsonb ->> 'confirmationsupervisorenabled' IN ('1','4')
+                OR
+                (
+                    (bo.json::jsonb ->> 'confirmationsupervisorenabled') = '2'
+                    AND
+                    (ba.json::jsonb ->> 'confirmationcount')::int = 1
+                )
+            )";
+
+            return "$waitforconfirmation AND $conflevel AND $supervisorcond AND $stepcondition";
+        }
     }
 
     /**
@@ -190,21 +212,32 @@ class confirmbooking implements confirmbooking_interface {
         $hrids = explode(',', get_config('bookingextension_confirmation_supervisor', 'confirmation_supervisor_hrusers'));
         $ishr = in_array($USER->id, $hrids);
 
-        // Bind params.
+        // Params.
         $params['supervisorfieldshortname'] = $supervisorfieldshortname;
         $params['currentuserid'] = $USER->id;
 
         // Core condition.
-        $waitforconfirmation = "(JSON_UNQUOTE(JSON_EXTRACT(bo.json, '$.waitforconfirmation')) = '1'";
+        $waitforconfirmation = "CAST(JSON_UNQUOTE(JSON_EXTRACT(bo.json, '$.waitforconfirmation')) AS UNSIGNED) > 0";
 
         if ($ishr) {
-            // HR should see only 2, 3, 4.
-            $conflevel = "CAST(JSON_UNQUOTE(JSON_EXTRACT(bo.json, '$.confirmationsupervisorenabled')) AS UNSIGNED) IN (2,3,4))";
-            $supervisorcond = ""; // Not needed for HR.
+            // HR should see 2, 3, 4
+            $conflevel = "CAST(JSON_UNQUOTE(JSON_EXTRACT(bo.json, '$.confirmationsupervisorenabled')) AS UNSIGNED) IN (2,3,4)";
+
+            // Type 4: HR sees it only if confirmationcount == 1
+            $stepcondition = "(
+                CAST(JSON_UNQUOTE(JSON_EXTRACT(bo.json, '$.confirmationsupervisorenabled')) AS UNSIGNED) IN (2,3)
+                OR (
+                    CAST(JSON_UNQUOTE(JSON_EXTRACT(bo.json, '$.confirmationsupervisorenabled')) AS UNSIGNED) = 4
+                    AND CAST(JSON_UNQUOTE(JSON_EXTRACT(ba.json, '$.confirmationcount')) AS UNSIGNED) = 1
+                )
+            )";
+
+            return "($waitforconfirmation AND $conflevel AND $stepcondition)";
         } else {
-            // Supervisor sees only 1, 2, 4 — and must match profile field.
-            $conflevel = "CAST(JSON_UNQUOTE(JSON_EXTRACT(bo.json, '$.confirmationsupervisorenabled')) AS UNSIGNED) IN (1,2,4))";
-            $supervisorcond = " AND EXISTS (
+            // Supervisor should see 1, 2, 4 — but must be in the custom profile field.
+            $conflevel = "CAST(JSON_UNQUOTE(JSON_EXTRACT(bo.json, '$.confirmationsupervisorenabled')) AS UNSIGNED) IN (1,2,4)";
+
+            $supervisorcond = "EXISTS (
                 SELECT 1
                 FROM {user_info_data} uid
                 JOIN {user_info_field} uif ON uid.fieldid = uif.id
@@ -212,8 +245,16 @@ class confirmbooking implements confirmbooking_interface {
                 AND uid.userid = u.id
                 AND FIND_IN_SET(:currentuserid, uid.data) > 0
             )";
-        }
 
-        return "$waitforconfirmation AND $conflevel $supervisorcond";
+            $stepcondition = "(
+                CAST(JSON_UNQUOTE(JSON_EXTRACT(bo.json, '$.confirmationsupervisorenabled')) AS UNSIGNED) IN (1,4)
+                OR (
+                    CAST(JSON_UNQUOTE(JSON_EXTRACT(bo.json, '$.confirmationsupervisorenabled')) AS UNSIGNED) = 2
+                    AND CAST(JSON_UNQUOTE(JSON_EXTRACT(ba.json, '$.confirmationcount')) AS UNSIGNED) = 1
+                )
+            )";
+
+            return "($waitforconfirmation AND $conflevel AND $supervisorcond AND $stepcondition)";
+        }
     }
 }
