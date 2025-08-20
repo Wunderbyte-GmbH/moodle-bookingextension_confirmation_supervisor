@@ -99,7 +99,7 @@ class confirmation_supervisor extends bookingextension implements bookingextensi
             get_string('bookingextensionconfirmationsupervisor:heading_desc', 'bookingextension_confirmation_supervisor')
         ));
         $settings->add(new admin_setting_configcheckbox(
-            'bookingextension_confirmation_supervisor/confirmation_supervisor_enabled',
+            'bookingextension_confirmation_supervisor/confirmationsupervisorenabled',
             get_string('bookingextensionconfirmationsupervisor:confirmationsupervisorenabled', 'bookingextension_confirmation_supervisor'),
             get_string('bookingextensionconfirmationsupervisor:confirmationsupervisorenabled_desc', 'bookingextension_confirmation_supervisor'),
             0
