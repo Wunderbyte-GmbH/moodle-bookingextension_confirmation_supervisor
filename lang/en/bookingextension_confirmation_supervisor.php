@@ -22,6 +22,7 @@
  * @author      Georg Maißer
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+$string['alreadyconfirmed'] = 'You already confirmed';
 $string['bookingextension_confirmation_supervisor'] = 'Allow confirmation by supervisor';
 $string['bookingextensionconfirmationsupervisor:confirmationsupervisorenabled'] = "Activate confirmation by supervisor";
 $string['bookingextensionconfirmationsupervisor:confirmationsupervisorenabled_desc'] = "Explanation";
@@ -34,6 +35,8 @@ $string['confirmbysupervisor'] = 'Confirmation by supervisor';
 $string['confirmbysupervisorhr'] = 'Confirmation first by supervisor, then HR';
 $string['hrusers'] = "HR userids";
 $string['hrusers_desc'] = "Enter the Moodle user ids of HR, comma separated";
+$string['needsconfirmationofhr'] = 'HR has to confirm';
+$string['needsconfirmationofsupervisor'] = 'Supervisor has to confirm';
 $string['noconfirmationneeded'] = 'No confirmation needed';
 $string['notallowedtoconfirm'] = "Not allowed to confirm";
 $string['pluginname'] = 'Confirmation workflow by supervisor';

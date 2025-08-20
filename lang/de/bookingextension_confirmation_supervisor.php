@@ -22,6 +22,7 @@
  * @author      Georg Maißer
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+$string['alreadyconfirmed'] = 'Sie haben bereits bestätigt';
 $string['bookingextension_confirmation_supervisor'] = 'Bestätigung durch Vorgesetzte';
 $string['bookingextensionconfirmationsupervisor:confirmationsupervisorenabled'] = "Bestätigung durch Vorgesetzte aktiviert";
 $string['bookingextensionconfirmationsupervisor:confirmationsupervisorenabled_desc'] = "Erläuterung";
@@ -34,6 +35,8 @@ $string['confirmbysupervisor'] = 'Bestätigung durch Vorgesetzte:n';
 $string['confirmbysupervisorhr'] = 'Bestätigung erst durch Vorgesetzte:n, dann Personalabteilung';
 $string['hrusers'] = "Userids der Personalabteilung";
 $string['hrusers_desc'] = "Userids der Personalabteilung, mit Komma getrennt";
+$string['needsconfirmationofhr'] = 'Die Personalabteilung muss bestätigen';
+$string['needsconfirmationofsupervisor'] = 'Der/Die Vorgesetzte muss bestätigen';
 $string['noconfirmationneeded'] = 'Keine Bestätigung notwendig';
 $string['notallowedtoconfirm'] = "Keine Berechtigung zu buchen";
 $string['pluginname'] = 'Bestätigungsworkflow durch Vorgesetzte/n';
