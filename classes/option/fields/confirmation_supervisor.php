@@ -193,6 +193,10 @@ class confirmation_supervisor extends field_base {
             return;
         }
 
+        if (!get_config('bookingextension_confirmation_supervisor', 'confirmationsupervisorenabled')) {
+            return;
+        }
+
         $options = [
             0 => get_string('noconfirmationneeded', 'bookingextension_confirmation_supervisor'),
             1 => get_string('confirmbysupervisor', 'bookingextension_confirmation_supervisor'),
