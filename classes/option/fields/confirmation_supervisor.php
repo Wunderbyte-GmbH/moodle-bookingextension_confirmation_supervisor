@@ -203,6 +203,7 @@ class confirmation_supervisor extends field_base {
             2 => get_string('confirmbyhrsupervisor', 'bookingextension_confirmation_supervisor'),
             3 => get_string('confirmbyhr', 'bookingextension_confirmation_supervisor'),
             4 => get_string('confirmbysupervisorhr', 'bookingextension_confirmation_supervisor'),
+            5 => get_string('confirmbysupervisororhr', 'bookingextension_confirmation_supervisor'),
         ];
 
         $mform->addElement(
