@@ -23,6 +23,8 @@
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 $string['alreadyconfirmed'] = 'Sie haben bereits bestätigt';
+$string['alreadyconfirmedbyhr'] = 'Personalabteilung hat bereits bestätigt';
+$string['alreadyconfirmedbysupervisor'] = 'Vorgesetzte:n hat bereits bestätigt';
 $string['bookingextension_confirmation_supervisor'] = 'Bestätigung durch Vorgesetzte';
 $string['bookingextensionconfirmationsupervisor:confirmationsupervisorenabled'] = "Bestätigung durch Vorgesetzte aktiviert";
 $string['bookingextensionconfirmationsupervisor:confirmationsupervisorenabled_desc'] = "Erläuterung";
@@ -33,6 +35,7 @@ $string['confirmbyhr'] = 'Bestätigung durch Personalabteilung';
 $string['confirmbyhrsupervisor'] = 'Bestätigung erst durch Personalabteilung, dann Vorgesetzte:n';
 $string['confirmbysupervisor'] = 'Bestätigung durch Vorgesetzte:n';
 $string['confirmbysupervisorhr'] = 'Bestätigung erst durch Vorgesetzte:n, dann Personalabteilung';
+$string['confirmbysupervisororhr'] = 'Bestätigung durch Vorgesetzte:n oder Personalabteilung';
 $string['hrusers'] = "Userids der Personalabteilung";
 $string['hrusers_desc'] = "Userids der Personalabteilung, mit Komma getrennt";
 $string['needsconfirmationofhr'] = 'Die Personalabteilung muss bestätigen';

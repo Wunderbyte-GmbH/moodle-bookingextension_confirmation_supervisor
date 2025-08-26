@@ -23,6 +23,8 @@
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 $string['alreadyconfirmed'] = 'You already confirmed';
+$string['alreadyconfirmedbyhr'] = 'HR already confirmed';
+$string['alreadyconfirmedbysupervisor'] = 'Supervisor already confirmed';
 $string['bookingextension_confirmation_supervisor'] = 'Allow confirmation by supervisor';
 $string['bookingextensionconfirmationsupervisor:confirmationsupervisorenabled'] = "Activate confirmation by supervisor";
 $string['bookingextensionconfirmationsupervisor:confirmationsupervisorenabled_desc'] = "Explanation";
@@ -33,6 +35,7 @@ $string['confirmbyhr'] = 'Confirmation by HR';
 $string['confirmbyhrsupervisor'] = 'Confirmation first by HR, then supervisor';
 $string['confirmbysupervisor'] = 'Confirmation by supervisor';
 $string['confirmbysupervisorhr'] = 'Confirmation first by supervisor, then HR';
+$string['confirmbysupervisororhr'] = 'Confirmation by supervisor or HR';
 $string['hrusers'] = "HR userids";
 $string['hrusers_desc'] = "Enter the Moodle user ids of HR, comma separated";
 $string['needsconfirmationofhr'] = 'HR has to confirm';

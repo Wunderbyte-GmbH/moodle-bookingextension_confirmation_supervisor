@@ -58,8 +58,14 @@ class confirmbooking implements confirmbooking_interface {
 
         $bookinganswers = singleton_service::get_instance_of_booking_answers($settings);
         $bookinganswer = ($bookinganswers->get_usersonwaitinglist())[$userid];
+        // Get current number of confirmation.
         $confirmationcount = (!empty($bookinganswer->json)) ?
             (json_decode($bookinganswer->json))->confirmationcount ?? 0 : 0;
+        // Get list of users ids of approvers who currently confirmed.
+        $confirmationby = (!empty($bookinganswer->json)) ?
+            (json_decode($bookinganswer->json))->confirmwaitinglist_modifieduserid ?? [] : [];
+        // Get User ID of the last approver.
+        $lastconfirmationby = count($confirmationby) ? end($confirmationby) : 0;
 
         $bosettings = singleton_service::get_instance_of_booking_option_settings($optionid);
 
@@ -78,26 +84,45 @@ class confirmbooking implements confirmbooking_interface {
         $ishr = in_array($USER->id, $hrids);
 
         if ($ishr) {
-            // We need to check value of confirmationsupervisorenabled. HR should see 2, 3, 4.
+            // We need to check value of confirmationsupervisorenabled. HR should see 2, 3, 4, 5.
             // For type 2 (HR → supervisor), show only if confirmationcount = 0 in booking answer record.
             // For type 4 (supervisor → HR), show only if confirmationcount = 1 in booking answer record.
-            if (!in_array($confirmationsupervisorenabled, [2, 3, 4])) {
+            if (!in_array($confirmationsupervisorenabled, [2, 3, 4, 5])) {
                 // Cannot approve, because based on confirmationsupervisorenabled settings,
                 // HR is not allowed to confirm the answers of this booking option.
                 return [$approved, $message, $reload];
             }
 
-            if ($confirmationsupervisorenabled === 2 && $confirmationcount != 0) {
+            if ($confirmationsupervisorenabled === 4 && $confirmationcount == 0) {
+                // Cannot approve, because the booking answer is not confirmed by supervisor yet and
+                // HR must wait for confirmartion of supervisor.
+                $message = get_string('needsconfirmationofsupervisor', 'bookingextension_confirmation_supervisor');
+                return [$approved, $message, $reload];
+            }
+
+            if (
+                (in_array($confirmationsupervisorenabled, [2, 3]) && $confirmationcount >= 1)
+                ||
+                (in_array($confirmationsupervisorenabled, [4]) && $confirmationcount >= 2)
+            ) {
                 // Cannot approve, because HR confirmed the booking answer previously.
                 $message = get_string('alreadyconfirmed', 'bookingextension_confirmation_supervisor');
                 return [$approved, $message, $reload];
             }
 
-            if ($confirmationsupervisorenabled === 4 && $confirmationcount != 1) {
-                // Cannot approve, because the booking answer is not confirmed by supervisor yet and
-                // HR must wait for confirmartion of supervisor.
-                $message = get_string('needsconfirmationofsupervisor', 'bookingextension_confirmation_supervisor');
-                return [$approved, $message, $reload];
+            if (
+                (in_array($confirmationsupervisorenabled, [5]) && $confirmationcount >= 1)
+            ) {
+                // Check who has confirmed the ansewr, HR or supervisor, to return meaningful message.
+                if ($lastconfirmationby == $USER->id) {
+                    // Cannot approve, because HR confirmed the booking answer previously.
+                    $message = get_string('alreadyconfirmed', 'bookingextension_confirmation_supervisor');
+                    return [$approved, $message, $reload];
+                } else {
+                    // Cannot approve, because Supervisor confirmed the booking answer previously.
+                    $message = get_string('alreadyconfirmedbysupervisor', 'bookingextension_confirmation_supervisor');
+                    return [$approved, $message, $reload];
+                }
             }
         } else {
             // Check if user user is supervisor for the related user of the booking answer record,
@@ -113,26 +138,44 @@ class confirmbooking implements confirmbooking_interface {
                 // of the user who owns the booking answer.
                 return [$approved, $message, $reload]; // Can not approve.
             }
-            // We need to check value of confirmationsupervisorenabled. HR should see 1, 2, 4.
+            // We need to check value of confirmationsupervisorenabled. HR should see 1, 2, 4, 5.
             // For type 2 (HR → supervisor), show only if confirmationcount = 1 in booking answer record.
             // For type 4 (supervisor → HR), show only if confirmationcount = 0 in booking answer record.
-            if (!in_array($confirmationsupervisorenabled, [1, 2, 4])) {
+            if (!in_array($confirmationsupervisorenabled, [1, 2, 4, 5])) {
                 // Cannot approve, because based on confirmationsupervisorenabled settings,
                 // Supervisor is not allowed to confirm the answers of this booking option.
                 return [$approved, $message, $reload];
             }
 
-            if ($confirmationsupervisorenabled === 2 && $confirmationcount != 1) {
+            if ($confirmationsupervisorenabled === 2 && $confirmationcount == 0) {
                 // Cannot approve, because supervisor confirmed the booking answer previously.
                 $message = get_string('needsconfirmationofhr', 'bookingextension_confirmation_supervisor');
                 return [$approved, $message, $reload]; // Can not approve.
             }
 
-            if ($confirmationsupervisorenabled === 4 && $confirmationcount != 0) {
-                // Cannot approve, because the booking answer is not confirmed by HR yet and
-                // Supervisor must wait for confirmation of supervisor.
+            if (
+                (in_array($confirmationsupervisorenabled, [1, 4]) && $confirmationcount >= 1)
+                ||
+                (in_array($confirmationsupervisorenabled, [2]) && $confirmationcount >= 2)
+            ) {
+                // Cannot approve, because HR confirmed the booking answer previously.
                 $message = get_string('alreadyconfirmed', 'bookingextension_confirmation_supervisor');
-                return [$approved, $message, $reload]; // Can not approve.
+                return [$approved, $message, $reload];
+            }
+
+            if (
+                (in_array($confirmationsupervisorenabled, [5]) && $confirmationcount >= 1)
+            ) {
+                // Check who has confirmed the ansewr, HR or supervisor, to return meaningful message.
+                if ($lastconfirmationby == $USER->id) {
+                    // Cannot approve, because Supervisor confirmed the booking answer previously.
+                    $message = get_string('alreadyconfirmed', 'bookingextension_confirmation_supervisor');
+                    return [$approved, $message, $reload];
+                } else {
+                    // Cannot approve, because HR confirmed the booking answer previously.
+                    $message = get_string('alreadyconfirmedbyhr', 'bookingextension_confirmation_supervisor');
+                    return [$approved, $message, $reload];
+                }
             }
         }
 
@@ -237,12 +280,12 @@ class confirmbooking implements confirmbooking_interface {
 
         if ($ishr) {
             // HR should see 2, 3, 4.
-            $conflevel = "bo.json::jsonb ->> 'confirmationsupervisorenabled' IN ('2','3','4')";
+            $conflevel = "bo.json::jsonb ->> 'confirmationsupervisorenabled' IN ('2','3','4','5')";
 
             return "$waitforconfirmation AND $conflevel";
         } else {
             // Supervisors should see 1, 2, 4 — but only if they're linked via profile field.
-            $conflevel = "bo.json::jsonb ->> 'confirmationsupervisorenabled' IN ('1','2','4')";
+            $conflevel = "bo.json::jsonb ->> 'confirmationsupervisorenabled' IN ('1','2','4','5')";
             $supervisorcond = "EXISTS (
                 SELECT 1
                 FROM {user_info_data} uid
@@ -281,12 +324,12 @@ class confirmbooking implements confirmbooking_interface {
 
         if ($ishr) {
             // HR should see 2, 3, 4.
-            $conflevel = "CAST(JSON_UNQUOTE(JSON_EXTRACT(bo.json, '$.confirmationsupervisorenabled')) AS UNSIGNED) IN (2,3,4)";
+            $conflevel = "CAST(JSON_UNQUOTE(JSON_EXTRACT(bo.json, '$.confirmationsupervisorenabled')) AS UNSIGNED) IN (2,3,4,5)";
 
             return "($waitforconfirmation AND $conflevel)";
         } else {
             // Supervisors should see 1, 2, 4 — but must be in the profile field.
-            $conflevel = "CAST(JSON_UNQUOTE(JSON_EXTRACT(bo.json, '$.confirmationsupervisorenabled')) AS UNSIGNED) IN (1,2,4)";
+            $conflevel = "CAST(JSON_UNQUOTE(JSON_EXTRACT(bo.json, '$.confirmationsupervisorenabled')) AS UNSIGNED) IN (1,2,4,5)";
 
             $supervisorcond = "EXISTS (
                 SELECT 1
@@ -315,6 +358,7 @@ class confirmbooking implements confirmbooking_interface {
             switch ($confirmationsupervisorenabled) {
                 case 1:
                 case 3:
+                case 5:
                     return 1;
                 case 2:
                 case 4:
