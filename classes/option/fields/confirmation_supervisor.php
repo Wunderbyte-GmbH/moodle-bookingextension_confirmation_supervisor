@@ -197,20 +197,11 @@ class confirmation_supervisor extends field_base {
             return;
         }
 
-        $options = [
-            0 => get_string('noconfirmationneeded', 'bookingextension_confirmation_supervisor'),
-            1 => get_string('confirmbysupervisor', 'bookingextension_confirmation_supervisor'),
-            2 => get_string('confirmbyhrsupervisor', 'bookingextension_confirmation_supervisor'),
-            3 => get_string('confirmbyhr', 'bookingextension_confirmation_supervisor'),
-            4 => get_string('confirmbysupervisorhr', 'bookingextension_confirmation_supervisor'),
-            5 => get_string('confirmbysupervisororhr', 'bookingextension_confirmation_supervisor'),
-        ];
-
         $mform->addElement(
             'select',
             'confirmationsupervisorenabled',
             get_string('confirmationsupervisorenabled', 'bookingextension_confirmation_supervisor'),
-            $options,
+            CONFIRMATION_ORDER_OPTIONS,
             0
         );
         $mform->hideIf('confirmationsupervisorenabled', 'waitforconfirmation', 'neq', 1);
@@ -244,13 +235,18 @@ class confirmation_supervisor extends field_base {
      *
      */
     public static function set_data(stdClass &$data, booking_option_settings $settings) {
+        $defaultconfirmationorder = get_config('bookingextension_confirmation_supervisor', 'defaultconfirmationorder') ?? 0;
+
         if (!empty($data->importing)) {
             $data->confirmationsupervisorenabled = $data->confirmationsupervisorenabled
-                ?? booking_option::get_value_of_json_by_key($data->id, "confirmationsupervisorenabled") ?? 0;
+                ?? booking_option::get_value_of_json_by_key($data->id, "confirmationsupervisorenabled")
+                ?? $defaultconfirmationorder;
         } else {
             $confirmationsupervisorenabled = booking_option::get_value_of_json_by_key($data->id, "confirmationsupervisorenabled");
             if (!empty($confirmationsupervisorenabled)) {
                 $data->confirmationsupervisorenabled = $confirmationsupervisorenabled;
+            } else {
+                $data->confirmationsupervisorenabled = $defaultconfirmationorder;
             }
         }
     }

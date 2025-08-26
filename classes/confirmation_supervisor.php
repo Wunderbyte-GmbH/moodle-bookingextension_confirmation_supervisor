@@ -98,12 +98,24 @@ class confirmation_supervisor extends bookingextension implements bookingextensi
             get_string('bookingextensionconfirmationsupervisor:heading', 'bookingextension_confirmation_supervisor'),
             get_string('bookingextensionconfirmationsupervisor:heading_desc', 'bookingextension_confirmation_supervisor')
         ));
+
+        // Checkbox to enable or disable.
         $settings->add(new admin_setting_configcheckbox(
             'bookingextension_confirmation_supervisor/confirmationsupervisorenabled',
             get_string('bookingextensionconfirmationsupervisor:confirmationsupervisorenabled', 'bookingextension_confirmation_supervisor'),
             get_string('bookingextensionconfirmationsupervisor:confirmationsupervisorenabled_desc', 'bookingextension_confirmation_supervisor'),
             0
         ));
+
+        $settings->add(
+            new admin_setting_configselect(
+                'bookingextension_confirmation_supervisor/defaultconfirmationorder',
+                get_string('defaultconfirmationorder', 'bookingextension_confirmation_supervisor'),
+                get_string('defaultconfirmationorder_desc', 'bookingextension_confirmation_supervisor'),
+                0,
+                CONFIRMATION_ORDER_OPTIONS
+            )
+        );
 
         $settings->add(new admin_setting_configtext(
             'bookingextension_confirmation_supervisor/confirmation_supervisor_hrusers',
@@ -123,14 +135,14 @@ class confirmation_supervisor extends bookingextension implements bookingextensi
         }
 
         $settings->add(
-        new admin_setting_configselect(
-            'bookingextension_confirmation_supervisor/supervisor',
-            get_string('supervisorfield', 'bookingextension_confirmation_supervisor'),
-            get_string('supervisorfield_desc', 'bookingextension_confirmation_supervisor'),
-            0,
-            $userprofilefieldsarray
-        )
-    );
+            new admin_setting_configselect(
+                'bookingextension_confirmation_supervisor/supervisor',
+                get_string('supervisorfield', 'bookingextension_confirmation_supervisor'),
+                get_string('supervisorfield_desc', 'bookingextension_confirmation_supervisor'),
+                0,
+                $userprofilefieldsarray
+            )
+        );
 
         $adminroot->add('modbookingfolder', $settings);
     }

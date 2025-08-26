@@ -29,6 +29,15 @@
 
 
 define('MOD_BOOKING_OPTION_FIELD_CONFIRMATION_SUPERVISOR', 393); // 392 to 399 for confirmation workflows.
+$options = [
+    0 => get_string('noconfirmationneeded', 'bookingextension_confirmation_supervisor'),
+    1 => get_string('confirmbysupervisor', 'bookingextension_confirmation_supervisor'),
+    2 => get_string('confirmbyhrsupervisor', 'bookingextension_confirmation_supervisor'),
+    3 => get_string('confirmbyhr', 'bookingextension_confirmation_supervisor'),
+    4 => get_string('confirmbysupervisorhr', 'bookingextension_confirmation_supervisor'),
+    5 => get_string('confirmbysupervisororhr', 'bookingextension_confirmation_supervisor'),
+];
+define('CONFIRMATION_ORDER_OPTIONS', $options);
 
 // Headers.
 // define('MOD_BOOKING_HEADER_SKELETON', 'confirmation_supervisorheader');
