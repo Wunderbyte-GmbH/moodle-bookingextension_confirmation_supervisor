@@ -43,6 +43,24 @@ require_once($CFG->dirroot . '/mod/booking/bookingextension/confirmation_supervi
  */
 class confirmation_supervisor extends bookingextension implements bookingextension_interface {
     /**
+     * Get the list of available options for confirmation order.
+     *
+     * Keys are the stored integer values; values are the translated labels.
+     *
+     * @return array<int,string>
+     */
+    public static function get_confirmation_order_options(): array {
+        return [
+            0 => get_string('noconfirmationneeded', 'bookingextension_confirmation_supervisor'),
+            1 => get_string('confirmbysupervisor', 'bookingextension_confirmation_supervisor'),
+            2 => get_string('confirmbyhrsupervisor', 'bookingextension_confirmation_supervisor'),
+            3 => get_string('confirmbyhr', 'bookingextension_confirmation_supervisor'),
+            4 => get_string('confirmbysupervisorhr', 'bookingextension_confirmation_supervisor'),
+            5 => get_string('confirmbysupervisororhr', 'bookingextension_confirmation_supervisor'),
+        ];
+    }
+
+    /**
      * Get the plugin name.
      * @return string the plugin name
      */
@@ -102,8 +120,14 @@ class confirmation_supervisor extends bookingextension implements bookingextensi
         // Checkbox to enable or disable.
         $settings->add(new admin_setting_configcheckbox(
             'bookingextension_confirmation_supervisor/confirmationsupervisorenabled',
-            get_string('bookingextensionconfirmationsupervisor:confirmationsupervisorenabled', 'bookingextension_confirmation_supervisor'),
-            get_string('bookingextensionconfirmationsupervisor:confirmationsupervisorenabled_desc', 'bookingextension_confirmation_supervisor'),
+            get_string(
+                'bookingextensionconfirmationsupervisor:confirmationsupervisorenabled',
+                'bookingextension_confirmation_supervisor'
+            ),
+            get_string(
+                'bookingextensionconfirmationsupervisor:confirmationsupervisorenabled_desc',
+                'bookingextension_confirmation_supervisor'
+            ),
             0
         ));
 
@@ -113,7 +137,7 @@ class confirmation_supervisor extends bookingextension implements bookingextensi
                 get_string('defaultconfirmationorder', 'bookingextension_confirmation_supervisor'),
                 get_string('defaultconfirmationorder_desc', 'bookingextension_confirmation_supervisor'),
                 0,
-                CONFIRMATION_ORDER_OPTIONS
+                self::get_confirmation_order_options()
             )
         );
 

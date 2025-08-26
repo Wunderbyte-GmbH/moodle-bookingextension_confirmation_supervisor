@@ -201,7 +201,7 @@ class confirmation_supervisor extends field_base {
             'select',
             'confirmationsupervisorenabled',
             get_string('confirmationsupervisorenabled', 'bookingextension_confirmation_supervisor'),
-            CONFIRMATION_ORDER_OPTIONS,
+            \bookingextension_confirmation_supervisor\confirmation_supervisor::get_confirmation_order_options(),
             0
         );
         $mform->hideIf('confirmationsupervisorenabled', 'waitforconfirmation', 'neq', 1);
