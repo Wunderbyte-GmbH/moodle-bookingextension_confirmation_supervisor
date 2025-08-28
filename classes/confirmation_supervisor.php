@@ -168,6 +168,16 @@ class confirmation_supervisor extends bookingextension implements bookingextensi
             )
         );
 
+        $settings->add(
+            new admin_setting_configselect(
+                'bookingextension_confirmation_supervisor/deputy',
+                get_string('deputyfield', 'bookingextension_confirmation_supervisor'),
+                get_string('deputyfield_desc', 'bookingextension_confirmation_supervisor'),
+                0,
+                $userprofilefieldsarray
+            )
+        );
+
         $adminroot->add('modbookingfolder', $settings);
     }
 
