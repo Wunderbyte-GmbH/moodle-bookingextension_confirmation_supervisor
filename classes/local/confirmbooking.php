@@ -75,15 +75,7 @@ class confirmbooking implements confirmbooking_interface {
 
         $confirmationsupervisorenabled = (int) $bosettings->jsonobject->confirmationsupervisorenabled;
 
-        // Check if user is HR. So we need to check bookig extension configuration.
-        $hrids = explode(
-            ',',
-            get_config('bookingextension_confirmation_supervisor', 'confirmation_supervisor_hrusers')
-        );
-
-        $ishr = in_array($USER->id, $hrids);
-
-        if ($ishr) {
+        if (self::is_hr($approverid)) {
             // We need to check value of confirmationsupervisorenabled. HR should see 2, 3, 4, 5.
             // For type 2 (HR → supervisor), show only if confirmationcount = 0 in booking answer record.
             // For type 4 (supervisor → HR), show only if confirmationcount = 1 in booking answer record.
@@ -125,14 +117,11 @@ class confirmbooking implements confirmbooking_interface {
                 }
             }
         } else {
-            // Check if user user is supervisor for the related user of the booking answer record,
-            // then check if allowed to confirm, and check if his/her right in confirmation order.
-            $supervisorfieldshortname = get_config('bookingextension_confirmation_supervisor', 'supervisor');
-            $user = singleton_service::get_instance_of_user($userid, true);
+            // Check if user user is supervisor (or deputy of supervisor) for the related user of the booking
+            // answer record, then check if allowed to confirm, and check if his/her right in confirmation order.
             if (
-                !$user
-                || !isset($user->profile[$supervisorfieldshortname])
-                || $user->profile[$supervisorfieldshortname] != $approverid
+                !self::is_supervisor($approverid, $userid)
+                && !self::is_deputy($approverid, $userid)
             ) {
                 // Canot approve because the user id of supervisor is not defined in the user profile
                 // of the user who owns the booking answer.
@@ -369,5 +358,79 @@ class confirmbooking implements confirmbooking_interface {
         }
 
         return 0;  // When the option 'no confirmation needed' is selected in booking option settings.
+    }
+
+    /**
+     * Determines if user is HR.
+     * @param mixed $approverid
+     * @return bool
+     */
+    private static function is_hr($approverid): bool {
+        // Check if user is HR. So we need to check bookig extension configuration.
+        $hrids = explode(
+            ',',
+            get_config('bookingextension_confirmation_supervisor', 'confirmation_supervisor_hrusers')
+        );
+
+        return in_array($approverid, $hrids);
+    }
+
+    /**
+     * Determines if approver is supervisor if given user.
+     * @param mixed $approverid
+     * @param mixed $userid
+     * @return bool
+     */
+    private static function is_supervisor($approverid, $userid): bool {
+        $supervisorfieldshortname = get_config('bookingextension_confirmation_supervisor', 'supervisor');
+        $user = singleton_service::get_instance_of_user($userid, true);
+        if (
+            $user
+            && isset($user->profile[$supervisorfieldshortname])
+            && $user->profile[$supervisorfieldshortname] == $approverid
+        ) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Determines if appriver is deputy of the supervisor of the given user.
+     * @param mixed $approverid
+     * @param mixed $userid
+     * @return bool
+     */
+    private static function is_deputy($approverid, $userid) {
+        $supervisorfield = get_config('bookingextension_confirmation_supervisor', 'supervisor');
+        $user = singleton_service::get_instance_of_user($userid, true);
+        if ($user && !empty($user->profile[$supervisorfield])) {
+            // Found the supervisor of the user. (user is owner of the answer).
+            $svid = $user->profile[$supervisorfield]; // Supervisor ID.
+            $sv = singleton_service::get_instance_of_user($svid, true); // Supervisor.
+
+            if ($sv) {
+                $deputies = self::get_deputies($sv);
+                foreach ($deputies as $deputyid) {
+                    if ($deputyid == $approverid) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Returns deputies of as an array of integers.
+     * @param mixed $user
+     * @return string[]
+     */
+    private static function get_deputies($user = null): array {
+        $deputyfield = get_config('bookingextension_confirmation_supervisor', 'deputy');
+        if ($user && $user->profile[$deputyfield]) {
+            // Deputy Found.
+            return explode(',', $user->profile[$deputyfield]);
+        }
+        return [];
     }
 }
