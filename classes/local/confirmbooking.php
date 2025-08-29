@@ -57,7 +57,11 @@ class confirmbooking implements confirmbooking_interface {
         }
 
         $bookinganswers = singleton_service::get_instance_of_booking_answers($settings);
-        $bookinganswer = ($bookinganswers->get_usersonwaitinglist())[$userid];
+        $bookinganswer = ($bookinganswers->get_usersonwaitinglist())[$userid] ?? null;
+        if (empty($bookinganswer)) {
+            $message = 'Nothing to confirm';
+            return [$approved, $message, $reload]; // Can not approve.
+        }
         // Get current number of confirmation.
         $confirmationcount = (!empty($bookinganswer->json)) ?
             (json_decode($bookinganswer->json))->confirmationcount ?? 0 : 0;
