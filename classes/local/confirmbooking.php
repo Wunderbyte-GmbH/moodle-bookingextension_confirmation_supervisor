@@ -253,6 +253,7 @@ class confirmbooking implements confirmbooking_interface {
         // (might also need to check the context capabilities on all booking instances, when we think of it).
 
         $supervisorfieldshortname = get_config('bookingextension_confirmation_supervisor', 'supervisor');
+        $deputyfieldshortname = get_config('bookingextension_confirmation_supervisor', 'deputy');
 
         $hrids = explode(
             ',',
@@ -263,6 +264,9 @@ class confirmbooking implements confirmbooking_interface {
         // Params.
         $params['becssupervisorid'] = $USER->id;
         $params['becssupervisorfieldshortname'] = $supervisorfieldshortname;
+        $params['becssupervisorfieldshortname2'] = $supervisorfieldshortname;
+        $params['becsdeputyid'] = $USER->id;
+        $params['becsdeputyfieldshortname'] = $deputyfieldshortname;
 
          // Core JSON confirmation field.
         $waitforconfirmation = "bo.json::jsonb ->> 'waitforconfirmation' > '0'";
@@ -283,8 +287,26 @@ class confirmbooking implements confirmbooking_interface {
                 AND uid.userid = u.id
                 AND (',' || uid.data || ',' LIKE '%,' || :becssupervisorid || ',%')
             )";
+            $deputycond = "EXISTS (
+                SELECT 1
+                FROM {user_info_data} uid
+                JOIN {user_info_field} uif ON uid.fieldid = uif.id
+                WHERE uif.shortname = :becssupervisorfieldshortname2
+                AND uid.userid = u.id
+                AND (',' || uid.data || ',' LIKE '%,' ||
+                    (
+                        SELECT uid3.userid
+                        FROM {user_info_data} uid3
+                        JOIN {user_info_field} uif3 ON uid3.fieldid = uif3.id
+                        WHERE uif3.shortname = :becsdeputyfieldshortname
+                        AND (',' || uid3.data || ',' LIKE '%,' || :becsdeputyid || ',%')
+                        LIMIT 1
+                    )
+                    || ',%'
+                )
+            )";
 
-            return "$waitforconfirmation AND $conflevel AND $supervisorcond";
+            return "$waitforconfirmation AND $conflevel AND ($supervisorcond OR $deputycond)";
         }
     }
 
@@ -319,17 +341,33 @@ class confirmbooking implements confirmbooking_interface {
         } else {
             // Supervisors should see 1, 2, 4 — but must be in the profile field.
             $conflevel = "CAST(JSON_UNQUOTE(JSON_EXTRACT(bo.json, '$.confirmationsupervisorenabled')) AS UNSIGNED) IN (1,2,4,5)";
-
             $supervisorcond = "EXISTS (
+                SELECT 1
+                FROM {user_info_data} uid
+                JOIN {user_info_field} uif ON uid.fieldid = uif.id
+                WHERE uif.shortname = :supervisorfieldshortname2
+                AND uid.userid = u.id
+                AND FIND_IN_SET(:currentuserid, uid.data) > 0
+            )";
+            $deputycond = "EXISTS (
                 SELECT 1
                 FROM {user_info_data} uid
                 JOIN {user_info_field} uif ON uid.fieldid = uif.id
                 WHERE uif.shortname = :supervisorfieldshortname
                 AND uid.userid = u.id
-                AND FIND_IN_SET(:currentuserid, uid.data) > 0
+                AND FIND_IN_SET(
+                    (
+                        SELECT uid3.userid
+                        FROM mdl_user_info_data uid3
+                        JOIN mdl_user_info_field uif3 ON uid3.fieldid = uif3.id
+                        WHERE uif3.shortname = :becsdeputyfieldshortname
+                        AND FIND_IN_SET(:becsdeputyid, uid3.data)
+                        LIMIT 1
+                    ),
+                    uid.data) > 0
             )";
 
-            return "($waitforconfirmation AND $conflevel AND $supervisorcond)";
+            return "($waitforconfirmation AND $conflevel AND ($supervisorcond OR $deputycond))";
         }
     }
 
