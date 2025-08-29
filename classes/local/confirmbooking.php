@@ -304,7 +304,7 @@ class confirmbooking implements confirmbooking_interface {
                         JOIN {user_info_field} uif3 ON uid3.fieldid = uif3.id
                         WHERE uif3.shortname = :becsdeputyfieldshortname
                         AND (',' || uid3.data || ',' LIKE '%,' || :becsdeputyid || ',%')
-                        LIMIT 1
+                        AND (',' || uid.data || ',' LIKE '%,' || uid3.userid || ',%')
                     )
                     || ',%'
                 )
