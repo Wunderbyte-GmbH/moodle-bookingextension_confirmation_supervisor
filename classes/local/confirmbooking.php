@@ -473,6 +473,15 @@ class confirmbooking implements confirmbooking_interface {
             $user = $USER;
         }
 
+        if (empty($user)) {
+            return [];
+        }
+
+        // Load custom profile fileds if not exists in user object.
+        if (empty($user->profile)) {
+            profile_load_custom_fields($user);
+        }
+
         $deputyfield = get_config('bookingextension_confirmation_supervisor', 'deputy');
         if ($user && isset($user->profile[$deputyfield])) {
             // Deputy Found.
