@@ -467,7 +467,12 @@ class confirmbooking implements confirmbooking_interface {
      * @param mixed $user
      * @return string[]
      */
-    private static function get_deputies($user = null): array {
+    public static function get_deputies($user = null): array {
+        if (empty($user)) {
+            global $USER;
+            $user = $USER;
+        }
+
         $deputyfield = get_config('bookingextension_confirmation_supervisor', 'deputy');
         if ($user && $user->profile[$deputyfield]) {
             // Deputy Found.
