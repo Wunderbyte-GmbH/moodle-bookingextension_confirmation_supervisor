@@ -483,7 +483,7 @@ class confirmbooking implements confirmbooking_interface {
         }
 
         $deputyfield = get_config('bookingextension_confirmation_supervisor', 'deputy');
-        if ($user && isset($user->profile[$deputyfield])) {
+        if ($user && isset($user->profile[$deputyfield]) && !empty($user->profile[$deputyfield])) {
             // Deputy Found.
             return explode(',', $user->profile[$deputyfield]);
         }
