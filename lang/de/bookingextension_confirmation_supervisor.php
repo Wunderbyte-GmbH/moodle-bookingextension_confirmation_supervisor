@@ -29,7 +29,10 @@ $string['bookingextension_confirmation_supervisor'] = 'Bestätigung durch Vorges
 $string['bookingextensionconfirmationsupervisor:confirmationsupervisorenabled'] = "Bestätigung durch Vorgesetzte aktiviert";
 $string['bookingextensionconfirmationsupervisor:confirmationsupervisorenabled_desc'] = "Erläuterung";
 $string['bookingextensionconfirmationsupervisor:heading'] = "Bestätigung durch Vorgesetzte";
-$string['bookingextensionconfirmationsupervisor:heading_desc'] = "Das ist nur eine Demonstration.";
+$string['bookingextensionconfirmationsupervisor:heading_desc'] = 'Die Bestätigung durch Vorgesetzte ermöglicht es, im hier definierten Nutzer/innen-Profilfeld die Moodle-IDs ihrer Vorgesetzten zu hinterlegen, die dann Freigaben erteilen können.
+Zusätzlich ist es möglich, Stellvertretungen zu ernennen. Hierfür müssen in das ausgewählte Profilfeld des/der Vorgesetzten die User-IDs der Stellvertretenden eingetragen werden. Diese haben dann alle Rechte, die auch die Vorgesetzten haben.
+Diese Funktion kann mit fixen Nutzer/innen kombiniert werden ("confirmation_supervisor_hrusers"). Wird zusätzlich die standardmäßige "Bestätigung durch Trainer:in" ausgewählt, haben Trainer:innen ebenfalls die Möglichkeit zu bestätigen.
+Ausführliche Einstellungen zur Bestätigung einzelner Buchungsoptionen lassen sich in den jeweiligen Einstellungen festlegen (z. B. die Reihenfolge des Bestätigungsprozesses).';
 $string['confirmationsupervisorenabled'] = 'Erlaube Bestätigung durch Vorgesetzte';
 $string['confirmbyhr'] = 'Bestätigung durch Personalabteilung';
 $string['confirmbyhrsupervisor'] = 'Bestätigung erst durch Personalabteilung, dann Vorgesetzte:n';
