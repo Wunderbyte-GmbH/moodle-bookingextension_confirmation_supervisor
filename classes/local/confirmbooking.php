@@ -478,9 +478,7 @@ class confirmbooking implements confirmbooking_interface {
         }
 
         // Load custom profile fileds if not exists in user object.
-        if (empty($user->profile)) {
-            profile_load_custom_fields($user);
-        }
+        $user = singleton_service::get_instance_of_user($user->id, true);
 
         $deputyfield = get_config('bookingextension_confirmation_supervisor', 'deputy');
         if ($user && isset($user->profile[$deputyfield]) && !empty($user->profile[$deputyfield])) {
