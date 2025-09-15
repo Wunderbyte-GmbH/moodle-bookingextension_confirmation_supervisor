@@ -204,14 +204,14 @@ class confirmation_supervisor extends field_base {
             \bookingextension_confirmation_supervisor\confirmation_supervisor::get_confirmation_order_options(),
             0
         );
-        $mform->hideIf('confirmationsupervisorenabled', 'waitforconfirmation', 'neq', 1);
+        $mform->hideIf('confirmationsupervisorenabled', 'waitforconfirmation', 'eq', 0);
         $mform->addElement(
             'static',
             'waitforconfirmationdescription',
             '',
             get_string('workflowdescription', 'bookingextension_confirmation_supervisor')
         );
-        $mform->hideIf('waitforconfirmationdescription', 'waitforconfirmation', 'neq', 1);
+        $mform->hideIf('waitforconfirmationdescription', 'waitforconfirmation', 'eq', 0);
     }
 
     /**
