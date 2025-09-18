@@ -34,6 +34,13 @@ use mod_booking\singleton_service;
  */
 class confirmbooking implements confirmbooking_interface {
     /**
+     * We use this property to decide about the restrictions.
+     * When true, the supervisor can see & confirm all answers regardless of demand order settings.
+     * @var bool $supervisorteam
+     */
+    public $supervisorteam = false;
+
+    /**
      * A subplugin can implement it's own way to add ways to allow supervisors to approve requests on waitinglist.
      * If the first value in the aray is true, this means that the test was successful.
      *
@@ -309,6 +316,12 @@ class confirmbooking implements confirmbooking_interface {
                     || ',%'
                 )
             )";
+
+            if ($this->supervisorteam) {
+                // If $supervisorteam is true, the supervisor can see all answers regardless of confirmation enablement,
+                // but only if they are linked via the profile field.
+                return "($supervisorcond OR $deputycond)";
+            }
 
             return "$waitforconfirmation AND $conflevel AND ($supervisorcond OR $deputycond)";
         }
