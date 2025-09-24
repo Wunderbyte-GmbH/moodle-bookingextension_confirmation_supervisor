@@ -280,16 +280,16 @@ class confirmbooking implements confirmbooking_interface {
         $params['becsdeputyfieldshortname'] = $deputyfieldshortname;
 
          // Core JSON confirmation field.
-        $waitforconfirmation = "bo.json::jsonb ->> 'waitforconfirmation' > '0'";
+        $waitforconfirmation = "(bo.json::jsonb ->> 'waitforconfirmation')::int > 0";
 
         if ($ishr) {
-            // HR should see 2, 3, 4.
-            $conflevel = "bo.json::jsonb ->> 'confirmationsupervisorenabled' IN ('2','3','4','5')";
+            // HR should see 2, 3, 4, 5.
+            $conflevel = "(bo.json::jsonb ->> 'confirmationsupervisorenabled')::int IN (2,3,4,5)";
 
             return "$waitforconfirmation AND $conflevel";
         } else {
-            // Supervisors should see 1, 2, 4 — but only if they're linked via profile field.
-            $conflevel = "bo.json::jsonb ->> 'confirmationsupervisorenabled' IN ('1','2','4','5')";
+            // Supervisors should see 1, 2, 4, 5 — but only if they're linked via profile field.
+            $conflevel = "(bo.json::jsonb ->> 'confirmationsupervisorenabled')::int IN (1,2,4,5)";
             $supervisorcond = "EXISTS (
                 SELECT 1
                 FROM {user_info_data} uid
