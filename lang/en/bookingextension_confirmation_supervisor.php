@@ -32,6 +32,7 @@ $string['bookingextensionconfirmationsupervisor:heading'] = "Confirmation by sup
 $string['bookingextensionconfirmationsupervisor:heading_desc'] = 'Supervisor confirmation allows you to store the Moodle IDs of supervisors in the defined user profile field. These supervisors can then issue approvals. In addition, it is possible to appoint deputies. To do so, enter the user ID(s) of the deputy/deputies into the selected profile field of the supervisor. Deputies are granted the same rights as the supervisor.
 This function can also be combined with fixed users ("confirmation_supervisor_hrusers"). If the standard option "confirmation by trainer" is also selected, trainers will additionally be able to approve.
 Detailed settings for the confirmation of individual booking options can be configured directly in their respective settings (e.g., defining the sequence of the confirmation process).';
+$string['confirmationsupervisor'] = '';
 $string['confirmationsupervisorenabled'] = 'Allow confirmation by supervisor';
 $string['confirmbyhr'] = 'Confirmation by HR';
 $string['confirmbyhrsupervisor'] = 'Confirmation first by HR, then supervisor';
