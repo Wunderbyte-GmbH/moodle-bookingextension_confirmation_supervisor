@@ -290,31 +290,26 @@ class confirmbooking implements confirmbooking_interface {
         } else {
             // Supervisors should see 1, 2, 4, 5 — but only if they're linked via profile field.
             $conflevel = "(bo.json::jsonb ->> 'confirmationsupervisorenabled')::int IN (1,2,4,5)";
+
             $supervisorcond = "EXISTS (
                 SELECT 1
                 FROM {user_info_data} uid
                 JOIN {user_info_field} uif ON uid.fieldid = uif.id
                 WHERE uif.shortname = :becssupervisorfieldshortname
                 AND uid.userid = u.id
-                AND (',' || uid.data || ',' LIKE '%,' || :becssupervisorid || ',%')
+                AND uid.data = :becssupervisorid
             )";
+
             $deputycond = "EXISTS (
                 SELECT 1
-                FROM {user_info_data} uid
-                JOIN {user_info_field} uif ON uid.fieldid = uif.id
-                WHERE uif.shortname = :becssupervisorfieldshortname2
-                AND uid.userid = u.id
-                AND (',' || uid.data || ',' LIKE '%,' ||
-                    (
-                        SELECT uid3.userid
-                        FROM {user_info_data} uid3
-                        JOIN {user_info_field} uif3 ON uid3.fieldid = uif3.id
-                        WHERE uif3.shortname = :becsdeputyfieldshortname
-                        AND (',' || uid3.data || ',' LIKE '%,' || :becsdeputyid || ',%')
-                        AND (',' || uid.data || ',' LIKE '%,' || uid3.userid || ',%')
-                    )
-                    || ',%'
-                )
+                FROM {user_info_data} sup
+                JOIN {user_info_field} uif_sup ON sup.fieldid = uif_sup.id
+                JOIN {user_info_data} dep ON (',' || sup.data || ',') LIKE '%,' || dep.userid || ',%'
+                JOIN {user_info_field} uif_dep ON dep.fieldid = uif_dep.id
+                WHERE uif_sup.shortname = :becssupervisorfieldshortname2
+                AND sup.userid = u.id
+                AND uif_dep.shortname = :becsdeputyfieldshortname
+                AND (',' || dep.data || ',' LIKE '%,' || :becsdeputyid || ',%')
             )";
 
             if ($this->supervisorteam) {
@@ -340,49 +335,52 @@ class confirmbooking implements confirmbooking_interface {
         global $USER;
 
         $supervisorfieldshortname = get_config('bookingextension_confirmation_supervisor', 'supervisor');
+        $deputyfieldshortname = get_config('bookingextension_confirmation_supervisor', 'deputy');
         $hrids = explode(',', get_config('bookingextension_confirmation_supervisor', 'confirmation_supervisor_hrusers'));
         $ishr = in_array($USER->id, $hrids);
 
         // Params.
         $params['supervisorfieldshortname'] = $supervisorfieldshortname;
+        $params['supervisorfieldshortname2'] = $supervisorfieldshortname;
+        $params['becsdeputyfieldshortname'] = $deputyfieldshortname;
         $params['currentuserid'] = $USER->id;
 
         // Core condition.
         $waitforconfirmation = "CAST(JSON_UNQUOTE(JSON_EXTRACT(bo.json, '$.waitforconfirmation')) AS UNSIGNED) > 0";
 
         if ($ishr) {
-            // HR should see 2, 3, 4.
+            // HR should see 2, 3, 4, 5.
             $conflevel = "CAST(JSON_UNQUOTE(JSON_EXTRACT(bo.json, '$.confirmationsupervisorenabled')) AS UNSIGNED) IN (2,3,4,5)";
 
             return "($waitforconfirmation AND $conflevel)";
         } else {
-            // Supervisors should see 1, 2, 4 — but must be in the profile field.
+            // Supervisors should see 1, 2, 4, 5 — but must be in the profile field.
             $conflevel = "CAST(JSON_UNQUOTE(JSON_EXTRACT(bo.json, '$.confirmationsupervisorenabled')) AS UNSIGNED) IN (1,2,4,5)";
             $supervisorcond = "EXISTS (
                 SELECT 1
                 FROM {user_info_data} uid
                 JOIN {user_info_field} uif ON uid.fieldid = uif.id
-                WHERE uif.shortname = :supervisorfieldshortname2
+                WHERE uif.shortname = :supervisorfieldshortname
                 AND uid.userid = u.id
-                AND FIND_IN_SET(:currentuserid, uid.data) > 0
+                AND uid.data = :currentuserid
             )";
             $deputycond = "EXISTS (
                 SELECT 1
-                FROM {user_info_data} uid
-                JOIN {user_info_field} uif ON uid.fieldid = uif.id
-                WHERE uif.shortname = :supervisorfieldshortname
-                AND uid.userid = u.id
-                AND FIND_IN_SET(
-                    (
-                        SELECT uid3.userid
-                        FROM mdl_user_info_data uid3
-                        JOIN mdl_user_info_field uif3 ON uid3.fieldid = uif3.id
-                        WHERE uif3.shortname = :becsdeputyfieldshortname
-                        AND FIND_IN_SET(:becsdeputyid, uid3.data)
-                        LIMIT 1
-                    ),
-                    uid.data) > 0
+                FROM {user_info_data} sup
+                JOIN {user_info_field} uif_sup ON sup.fieldid = uif_sup.id
+                JOIN {user_info_data} dep ON FIND_IN_SET(dep.userid, sup.data)
+                JOIN {user_info_field} uif_dep ON dep.fieldid = uif_dep.id
+                WHERE uif_sup.shortname = :supervisorfieldshortname2
+                AND sup.userid = u.id
+                AND uif_dep.shortname = :becsdeputyfieldshortname
+                AND FIND_IN_SET(:currentuserid, dep.data)
             )";
+
+            if ($this->supervisorteam) {
+                // If $supervisorteam is true, the supervisor can see all answers regardless of confirmation enablement,
+                // but only if they are linked via the profile field.
+                return "($supervisorcond OR $deputycond)";
+            }
 
             return "($waitforconfirmation AND $conflevel AND ($supervisorcond OR $deputycond))";
         }
