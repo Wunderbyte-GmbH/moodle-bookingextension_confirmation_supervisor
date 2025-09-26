@@ -276,10 +276,11 @@ class confirmbooking implements confirmbooking_interface {
         $params['becssupervisorid'] = $USER->id;
         $params['becssupervisorfieldshortname'] = $supervisorfieldshortname;
         $params['becssupervisorfieldshortname2'] = $supervisorfieldshortname;
-        $params['becsdeputyid'] = $USER->id;
+        $params['becsdeputyid1'] = $USER->id;
+        $params['becsdeputyid2'] = $USER->id;
         $params['becsdeputyfieldshortname'] = $deputyfieldshortname;
 
-         // Core JSON confirmation field.
+        // Core JSON confirmation field.
         $waitforconfirmation = "(bo.json::jsonb ->> 'waitforconfirmation')::int > 0";
 
         if ($ishr) {
@@ -309,7 +310,14 @@ class confirmbooking implements confirmbooking_interface {
                 WHERE uif_sup.shortname = :becssupervisorfieldshortname2
                 AND sup.userid = u.id
                 AND uif_dep.shortname = :becsdeputyfieldshortname
-                AND (',' || dep.data || ',' LIKE '%,' || :becsdeputyid || ',%')
+                AND dep.data IS NOT NULL
+                AND
+                (
+                    dep.data = :becsdeputyid1
+                    OR
+                    (',' || dep.data || ',' LIKE '%,' || :becsdeputyid2 || ',%')
+                )
+
             )";
 
             if ($this->supervisorteam) {
