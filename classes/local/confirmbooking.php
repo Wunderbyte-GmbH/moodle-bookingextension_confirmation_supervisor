@@ -245,7 +245,7 @@ class confirmbooking implements confirmbooking_interface {
      */
     public function return_where_sql_postgres(array &$params): string {
 
-        global $USER;
+        global $USER, $DB;
 
         // The logic needs to be like this.
 
@@ -264,7 +264,10 @@ class confirmbooking implements confirmbooking_interface {
         // (might also need to check the context capabilities on all booking instances, when we think of it).
 
         $supervisorfieldshortname = get_config('bookingextension_confirmation_supervisor', 'supervisor');
+        $supervisorfieldid = $DB->get_field('user_info_field', 'id', ['shortname' => $supervisorfieldshortname], IGNORE_MISSING);
+
         $deputyfieldshortname = get_config('bookingextension_confirmation_supervisor', 'deputy');
+        $deputyfieldid = $DB->get_field('user_info_field', 'id', ['shortname' => $deputyfieldshortname], IGNORE_MISSING);
 
         $hrids = explode(
             ',',
@@ -274,11 +277,11 @@ class confirmbooking implements confirmbooking_interface {
 
         // Params.
         $params['becssupervisorid'] = $USER->id;
-        $params['becssupervisorfieldshortname'] = $supervisorfieldshortname;
-        $params['becssupervisorfieldshortname2'] = $supervisorfieldshortname;
         $params['becsdeputyid1'] = $USER->id;
         $params['becsdeputyid2'] = $USER->id;
-        $params['becsdeputyfieldshortname'] = $deputyfieldshortname;
+        $params['supervisorfieldid'] = $supervisorfieldid;
+        $params['supervisorfieldid2'] = $supervisorfieldid;
+        $params['deputyfieldid'] = $deputyfieldid;
 
         // Core JSON confirmation field.
         $waitforconfirmation = "(bo.json::jsonb ->> 'waitforconfirmation')::int > 0";
@@ -291,12 +294,33 @@ class confirmbooking implements confirmbooking_interface {
         } else {
             // Supervisors should see 1, 2, 4, 5 — but only if they're linked via profile field.
             $conflevel = "(bo.json::jsonb ->> 'confirmationsupervisorenabled')::int IN (1,2,4,5)";
+            $sql = "
+            SELECT userid
+                FROM m_user_info_data uid
+                WHERE uid.fieldid = 11
+                AND(
+                uid.data = '105'
+                OR
+                uid.data IN (SELECT sup.userid::VARCHAR
+                FROM m_user_info_data sup
+                WHERE sup.fieldid=12
+                AND (sup.data = '105'
+                OR '105' = ANY (string_to_array(sup.data, ',')) )   )
+                )
+            ";
+            $records = $DB->get_fieldset_sql($sql);
+            // $supervisorcond = "EXISTS (
+            //     SELECT 1
+            //     FROM {user_info_data} uid
+            //     WHERE uid.fieldid = :supervisorfieldid
+            //     AND uid.userid = u.id
+            //     AND uid.data = :becssupervisorid
+            // )";
 
             $supervisorcond = "EXISTS (
                 SELECT 1
                 FROM {user_info_data} uid
-                JOIN {user_info_field} uif ON uid.fieldid = uif.id
-                WHERE uif.shortname = :becssupervisorfieldshortname
+                WHERE uid.fieldid = :supervisorfieldid
                 AND uid.userid = u.id
                 AND uid.data = :becssupervisorid
             )";
@@ -304,12 +328,10 @@ class confirmbooking implements confirmbooking_interface {
             $deputycond = "EXISTS (
                 SELECT 1
                 FROM {user_info_data} sup
-                JOIN {user_info_field} uif_sup ON sup.fieldid = uif_sup.id
                 JOIN {user_info_data} dep ON (',' || sup.data || ',') LIKE '%,' || dep.userid || ',%'
-                JOIN {user_info_field} uif_dep ON dep.fieldid = uif_dep.id
-                WHERE uif_sup.shortname = :becssupervisorfieldshortname2
+                WHERE sup.fieldid = :supervisorfieldid2
                 AND sup.userid = u.id
-                AND uif_dep.shortname = :becsdeputyfieldshortname
+                AND dep.fieldid = :deputyfieldid
                 AND dep.data IS NOT NULL
                 AND
                 (
@@ -320,12 +342,21 @@ class confirmbooking implements confirmbooking_interface {
 
             )";
 
+            [$inorequal, $params2] = $DB->get_in_or_equal($records, SQL_PARAMS_NAMED, 'becs_');
+            foreach ($params2 as $k => $v) {
+                $params[$k] = $v;
+            }
+
             if ($this->supervisorteam) {
+
                 // If $supervisorteam is true, the supervisor can see all answers regardless of confirmation enablement,
                 // but only if they are linked via the profile field.
+                return "ba.userid $inorequal";
                 return "($supervisorcond OR $deputycond)";
             }
 
+
+            return "$waitforconfirmation AND $conflevel AND ba.userid $inorequal";
             return "$waitforconfirmation AND $conflevel AND ($supervisorcond OR $deputycond)";
         }
     }
