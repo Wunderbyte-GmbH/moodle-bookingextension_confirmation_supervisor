@@ -303,21 +303,17 @@ class confirmbooking implements confirmbooking_interface {
             $params0['becsdeputyid2'] = $USER->id;
             $params0['becsupervisorfieldid'] = $supervisorfieldid;
             $params0['becdeputyfieldid'] = $deputyfieldid;
-
-            $records = $DB->get_fieldset_sql($sql, $params0);
-            [$inorequal, $params1] = $DB->get_in_or_equal($records, SQL_PARAMS_NAMED, 'becs1_');
-            // Add the params privded by get_in_or_get into main params.
-            foreach ($params1 as $k => $v) {
+            foreach ($params0 as $k => $v) {
                 $params[$k] = $v;
             }
 
             // If $supervisorteam is true, the supervisor can see all answers regardless of confirmation enablement,
             // but only if they are linked via the profile field.
             if ($this->supervisorteam) {
-                return "ba.userid $inorequal";
+                return "ba.userid IN ($sql)";
             }
 
-            return "$waitforconfirmation AND $conflevel AND ba.userid $inorequal";
+            return "$waitforconfirmation AND $conflevel AND ba.userid IN ($sql)";
         }
     }
 
@@ -384,22 +380,17 @@ class confirmbooking implements confirmbooking_interface {
                 'becdeputyfieldid' => $deputyfieldid,
             ];
 
-            $records = $DB->get_fieldset_sql($sql, $params0);
-
-            // Build an IN(...) clause for ba.userid.
-            [$inorequal, $params1] = $DB->get_in_or_equal($records, SQL_PARAMS_NAMED, 'becs1_');
-
-            foreach ($params1 as $k => $v) {
+            foreach ($params0 as $k => $v) {
                 $params[$k] = $v;
             }
 
             // If $supervisorteam is true, supervisor can see all answers regardless of confirmation enablement,
             // but only if they are linked via profile field.
             if ($this->supervisorteam) {
-                return "ba.userid $inorequal";
+                return "ba.userid IN ($sql)";
             }
 
-            return "$waitforconfirmation AND $conflevel AND ba.userid $inorequal";
+            return "$waitforconfirmation AND $conflevel AND ba.userid IN ($sql)";
         }
     }
 
