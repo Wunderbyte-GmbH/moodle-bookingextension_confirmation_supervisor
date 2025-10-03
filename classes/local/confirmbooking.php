@@ -247,41 +247,20 @@ class confirmbooking implements confirmbooking_interface {
 
         global $USER, $DB;
 
-        // The logic needs to be like this.
-
-        // Depending on the chosen setting in the column json,
-        // we either verify that the current user is a supervisor
-        // or the user is a HR
-        // and we need first confirmation
-        // or we need second confirmation.
-
-        // Actually, i guess supervisors should see the need for confirmation from HR and HR from supervisor
-        // so probably that should not even be an issue.
-
-        // So we just need to make sure the user is allowed to see the settings.
-        // The supervisor confirmation goes on hr, supervisorfield and deputy field.
-        // The trainer approval goes on being trainer for a given booking option.
-        // (might also need to check the context capabilities on all booking instances, when we think of it).
-
+        // Get the short name of the selected custom field for the supervisor field, then fetch the field ID from the database.
         $supervisorfieldshortname = get_config('bookingextension_confirmation_supervisor', 'supervisor');
         $supervisorfieldid = $DB->get_field('user_info_field', 'id', ['shortname' => $supervisorfieldshortname], IGNORE_MISSING);
 
+        // Get the short name of the selected custom field for the deputy field, then fetch the field ID from the database.
         $deputyfieldshortname = get_config('bookingextension_confirmation_supervisor', 'deputy');
         $deputyfieldid = $DB->get_field('user_info_field', 'id', ['shortname' => $deputyfieldshortname], IGNORE_MISSING);
 
+        // Get the list of HRs from config and explode it into an array.
         $hrids = explode(
             ',',
             get_config('bookingextension_confirmation_supervisor', 'confirmation_supervisor_hrusers')
         );
         $ishr = in_array($USER->id, $hrids);
-
-        // Params.
-        $params['becssupervisorid'] = $USER->id;
-        $params['becsdeputyid1'] = $USER->id;
-        $params['becsdeputyid2'] = $USER->id;
-        $params['supervisorfieldid'] = $supervisorfieldid;
-        $params['supervisorfieldid2'] = $supervisorfieldid;
-        $params['deputyfieldid'] = $deputyfieldid;
 
         // Core JSON confirmation field.
         $waitforconfirmation = "(bo.json::jsonb ->> 'waitforconfirmation')::int > 0";
@@ -294,70 +273,51 @@ class confirmbooking implements confirmbooking_interface {
         } else {
             // Supervisors should see 1, 2, 4, 5 — but only if they're linked via profile field.
             $conflevel = "(bo.json::jsonb ->> 'confirmationsupervisorenabled')::int IN (1,2,4,5)";
+            // Run a SQL query to extract an array of IDs that a supervisor or their deputies can see.
+            // Then use the get_in_or_equal function to prepare this part of the query with parameters,
+            // and include it in the main query.
             $sql = "
-            SELECT userid
+                SELECT userid
                 FROM m_user_info_data uid
-                WHERE uid.fieldid = 11
-                AND(
-                uid.data = '105'
-                OR
-                uid.data IN (SELECT sup.userid::VARCHAR
-                FROM m_user_info_data sup
-                WHERE sup.fieldid=12
-                AND (sup.data = '105'
-                OR '105' = ANY (string_to_array(sup.data, ',')) )   )
-                )
-            ";
-            $records = $DB->get_fieldset_sql($sql);
-            // $supervisorcond = "EXISTS (
-            //     SELECT 1
-            //     FROM {user_info_data} uid
-            //     WHERE uid.fieldid = :supervisorfieldid
-            //     AND uid.userid = u.id
-            //     AND uid.data = :becssupervisorid
-            // )";
-
-            $supervisorcond = "EXISTS (
-                SELECT 1
-                FROM {user_info_data} uid
-                WHERE uid.fieldid = :supervisorfieldid
-                AND uid.userid = u.id
-                AND uid.data = :becssupervisorid
-            )";
-
-            $deputycond = "EXISTS (
-                SELECT 1
-                FROM {user_info_data} sup
-                JOIN {user_info_data} dep ON (',' || sup.data || ',') LIKE '%,' || dep.userid || ',%'
-                WHERE sup.fieldid = :supervisorfieldid2
-                AND sup.userid = u.id
-                AND dep.fieldid = :deputyfieldid
-                AND dep.data IS NOT NULL
+                WHERE uid.fieldid = :becsupervisorfieldid
                 AND
                 (
-                    dep.data = :becsdeputyid1
+                    uid.data = :becssupervisorid
                     OR
-                    (',' || dep.data || ',' LIKE '%,' || :becsdeputyid2 || ',%')
+                    uid.data IN (
+                                    SELECT sup.userid::VARCHAR
+                                    FROM m_user_info_data sup
+                                    WHERE sup.fieldid = :becdeputyfieldid
+                                    AND
+                                    (
+                                        sup.data = :becsdeputyid1
+                                        OR
+                                        :becsdeputyid2 = ANY (string_to_array(sup.data, ','))
+                                    )
+                                )
                 )
+            ";
+            // Params.
+            $params0['becssupervisorid'] = $USER->id;
+            $params0['becsdeputyid1'] = $USER->id;
+            $params0['becsdeputyid2'] = $USER->id;
+            $params0['becsupervisorfieldid'] = $supervisorfieldid;
+            $params0['becdeputyfieldid'] = $deputyfieldid;
 
-            )";
-
-            [$inorequal, $params2] = $DB->get_in_or_equal($records, SQL_PARAMS_NAMED, 'becs_');
-            foreach ($params2 as $k => $v) {
+            $records = $DB->get_fieldset_sql($sql, $params0);
+            [$inorequal, $params1] = $DB->get_in_or_equal($records, SQL_PARAMS_NAMED, 'becs1_');
+            // Add the params privded by get_in_or_get into main params.
+            foreach ($params1 as $k => $v) {
                 $params[$k] = $v;
             }
 
+            // If $supervisorteam is true, the supervisor can see all answers regardless of confirmation enablement,
+            // but only if they are linked via the profile field.
             if ($this->supervisorteam) {
-
-                // If $supervisorteam is true, the supervisor can see all answers regardless of confirmation enablement,
-                // but only if they are linked via the profile field.
                 return "ba.userid $inorequal";
-                return "($supervisorcond OR $deputycond)";
             }
 
-
             return "$waitforconfirmation AND $conflevel AND ba.userid $inorequal";
-            return "$waitforconfirmation AND $conflevel AND ($supervisorcond OR $deputycond)";
         }
     }
 
@@ -371,57 +331,75 @@ class confirmbooking implements confirmbooking_interface {
      *
      */
     public function return_where_sql_mysql(array &$params): string {
-        global $USER;
+        global $USER, $DB;
 
+        // Get the short name of the selected custom field for the supervisor field, then fetch the field ID.
         $supervisorfieldshortname = get_config('bookingextension_confirmation_supervisor', 'supervisor');
+        $supervisorfieldid = $DB->get_field('user_info_field', 'id', ['shortname' => $supervisorfieldshortname], IGNORE_MISSING);
+
+        // Get the short name of the selected custom field for the deputy field, then fetch the field ID.
         $deputyfieldshortname = get_config('bookingextension_confirmation_supervisor', 'deputy');
+        $deputyfieldid = $DB->get_field('user_info_field', 'id', ['shortname' => $deputyfieldshortname], IGNORE_MISSING);
+
+        // Get the list of HRs from config and explode it into an array.
         $hrids = explode(',', get_config('bookingextension_confirmation_supervisor', 'confirmation_supervisor_hrusers'));
         $ishr = in_array($USER->id, $hrids);
 
-        // Params.
-        $params['supervisorfieldshortname'] = $supervisorfieldshortname;
-        $params['supervisorfieldshortname2'] = $supervisorfieldshortname;
-        $params['becsdeputyfieldshortname'] = $deputyfieldshortname;
-        $params['currentuserid'] = $USER->id;
-
-        // Core condition.
+        // Core JSON confirmation field.
         $waitforconfirmation = "CAST(JSON_UNQUOTE(JSON_EXTRACT(bo.json, '$.waitforconfirmation')) AS UNSIGNED) > 0";
 
         if ($ishr) {
             // HR should see 2, 3, 4, 5.
             $conflevel = "CAST(JSON_UNQUOTE(JSON_EXTRACT(bo.json, '$.confirmationsupervisorenabled')) AS UNSIGNED) IN (2,3,4,5)";
-
-            return "($waitforconfirmation AND $conflevel)";
+            return "$waitforconfirmation AND $conflevel";
         } else {
-            // Supervisors should see 1, 2, 4, 5 — but must be in the profile field.
+            // Supervisors should see 1, 2, 4, 5 — but only if they're linked via profile field.
             $conflevel = "CAST(JSON_UNQUOTE(JSON_EXTRACT(bo.json, '$.confirmationsupervisorenabled')) AS UNSIGNED) IN (1,2,4,5)";
-            $supervisorcond = "EXISTS (
-                SELECT 1
-                FROM {user_info_data} uid
-                JOIN {user_info_field} uif ON uid.fieldid = uif.id
-                WHERE uif.shortname = :supervisorfieldshortname
-                AND uid.userid = u.id
-                AND uid.data = :currentuserid
-            )";
-            $deputycond = "EXISTS (
-                SELECT 1
-                FROM {user_info_data} sup
-                JOIN {user_info_field} uif_sup ON sup.fieldid = uif_sup.id
-                JOIN {user_info_data} dep ON FIND_IN_SET(dep.userid, sup.data)
-                JOIN {user_info_field} uif_dep ON dep.fieldid = uif_dep.id
-                WHERE uif_sup.shortname = :supervisorfieldshortname2
-                AND sup.userid = u.id
-                AND uif_dep.shortname = :becsdeputyfieldshortname
-                AND FIND_IN_SET(:currentuserid, dep.data)
-            )";
 
-            if ($this->supervisorteam) {
-                // If $supervisorteam is true, the supervisor can see all answers regardless of confirmation enablement,
-                // but only if they are linked via the profile field.
-                return "($supervisorcond OR $deputycond)";
+            // Run a SQL query to extract an array of IDs that a supervisor or their deputies can see.
+            // Then use the get_in_or_equal function to prepare this part of the query with parameters,
+            // and include it in the main query.
+            $sql = "
+                SELECT userid
+                FROM {user_info_data} uid
+                WHERE uid.fieldid = :becsupervisorfieldid
+                AND (
+                    uid.data = :becssupervisorid
+                    OR uid.data IN (
+                        SELECT sup.userid
+                        FROM {user_info_data} sup
+                        WHERE sup.fieldid = :becdeputyfieldid
+                            AND (
+                                sup.data = :becsdeputyid1
+                                OR FIND_IN_SET(:becsdeputyid2, sup.data)
+                            )
+                    )
+                )
+            ";
+            $params0 = [
+                'becssupervisorid' => $USER->id,
+                'becsdeputyid1' => $USER->id,
+                'becsdeputyid2' => $USER->id,
+                'becsupervisorfieldid' => $supervisorfieldid,
+                'becdeputyfieldid' => $deputyfieldid,
+            ];
+
+            $records = $DB->get_fieldset_sql($sql, $params0);
+
+            // Build an IN(...) clause for ba.userid.
+            [$inorequal, $params1] = $DB->get_in_or_equal($records, SQL_PARAMS_NAMED, 'becs1_');
+
+            foreach ($params1 as $k => $v) {
+                $params[$k] = $v;
             }
 
-            return "($waitforconfirmation AND $conflevel AND ($supervisorcond OR $deputycond))";
+            // If $supervisorteam is true, supervisor can see all answers regardless of confirmation enablement,
+            // but only if they are linked via profile field.
+            if ($this->supervisorteam) {
+                return "ba.userid $inorequal";
+            }
+
+            return "$waitforconfirmation AND $conflevel AND ba.userid $inorequal";
         }
     }
 
