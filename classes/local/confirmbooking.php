@@ -263,7 +263,7 @@ class confirmbooking implements confirmbooking_interface {
         $ishr = in_array($USER->id, $hrids);
 
         // Core JSON confirmation field.
-        $waitforconfirmation = "(bo.json::jsonb ->> 'waitforconfirmation')::int > 0";
+        $waitforconfirmation = "(bo.json::jsonb ->> 'waitforconfirmation')::int IN (1,2)";
 
         if ($ishr) {
             // HR should see 2, 3, 4, 5.
