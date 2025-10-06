@@ -70,6 +70,7 @@ Feature: In a course add a booking option and manage waiting list wiht HR, supre
     And the following "blocks" exist:
       | blockname | contextlevel | reference   | pagetypepattern | defaultregion | defaultweight | title         | configdata                                           |
       | html      | User         | hr1         | my-index        | content       | 0             | HR1 block     | {"Tzo4OiJzdGRDbGFzcyI6Mzp7czo0OiJ0ZXh0IjtzOjM3OiI8cD5bbGlzdHRvYXBwcm92ZSBkZXB1dHlzZWxlY3Q9MV08L3A+IjtzOjU6InRpdGxlIjtzOjA6IiI7czo2OiJmb3JtYXQiO3M6MToiMSI7fQ=="} |
+      | html      | User         | hr2         | my-index        | content       | 0             | HR2 block     | {"Tzo4OiJzdGRDbGFzcyI6Mzp7czo0OiJ0ZXh0IjtzOjM3OiI8cD5bbGlzdHRvYXBwcm92ZSBkZXB1dHlzZWxlY3Q9MV08L3A+IjtzOjU6InRpdGxlIjtzOjA6IiI7czo2OiJmb3JtYXQiO3M6MToiMSI7fQ=="} |
       | html      | User         | supervisor1 | my-index        | content       | 0             | Superv1 block | {"Tzo4OiJzdGRDbGFzcyI6Mzp7czo0OiJ0ZXh0IjtzOjM3OiI8cD5bbGlzdHRvYXBwcm92ZSBkZXB1dHlzZWxlY3Q9MV08L3A+IjtzOjU6InRpdGxlIjtzOjA6IiI7czo2OiJmb3JtYXQiO3M6MToiMSI7fQ=="} |
       | html      | User         | supervisor2 | my-index        | content       | 0             | Superv2 block | {"Tzo4OiJzdGRDbGFzcyI6Mzp7czo0OiJ0ZXh0IjtzOjM3OiI8cD5bbGlzdHRvYXBwcm92ZSBkZXB1dHlzZWxlY3Q9MV08L3A+IjtzOjU6InRpdGxlIjtzOjA6IiI7czo2OiJmb3JtYXQiO3M6MToiMSI7fQ=="} |
       | html      | User         | deputy1     | my-index        | content       | 0             | Deputy1 block | {"Tzo4OiJzdGRDbGFzcyI6Mzp7czo0OiJ0ZXh0IjtzOjM3OiI8cD5bbGlzdHRvYXBwcm92ZSBkZXB1dHlzZWxlY3Q9MV08L3A+IjtzOjU6InRpdGxlIjtzOjA6IiI7czo2OiJmb3JtYXQiO3M6MToiMSI7fQ=="} |
@@ -114,6 +115,14 @@ Feature: In a course add a booking option and manage waiting list wiht HR, supre
     ## supervisor1: Validate but cannot approve of stundet1 - HR1 must approve first
     And I should see "student1@example.com" in the "#optionstoconfirm_optionstoconfirm_0_r1" "css_element"
     And I should see "HR has to confirm" in the "#optionstoconfirm_optionstoconfirm_0_r1" "css_element"
+    And I log out
+    ## Login as HR2, validate block on Dashboard. Not approve students
+    And I log in as "hr2"
+    And I follow "Dashboard"
+    And I click on "Options to confirm" "text" in the "#accordion-heading-optionstoconfirm" "css_element"
+    And I should see "student1@example.com" in the "#optionstoconfirm_optionstoconfirm_0_r1" "css_element"
+    And I should see "student2@example.com" in the "#optionstoconfirm_optionstoconfirm_0_r2" "css_element"
+    And I should see "student3@example.com" in the "#optionstoconfirm_optionstoconfirm_0_r3" "css_element"
     And I log out
     ## Login as HR1, validate block on Dashboard and approve students
     And I log in as "hr1"
@@ -222,6 +231,14 @@ Feature: In a course add a booking option and manage waiting list wiht HR, supre
     When I click on "Add" "button"
     And I click on "[data-bs-target='#accordion-item-waitinglist']" "css_element"
     And I should see "Not allowed to confirm" in the "#accordion-item-waitinglist" "css_element"
+    And I log out
+    ## Login as deputy2, validate block on Dashboard and student1 listed there
+    And I log in as "deputy2"
+    And I follow "Dashboard"
+    And I wait "111" seconds
+    And I click on "Options to confirm" "text" in the "#accordion-heading-optionstoconfirm" "css_element"
+    And I should see "student1@example.com" in the "#optionstoconfirm_optionstoconfirm_0_r1" "css_element"
+    And I should not see "student3@example.com"
     And I log out
     ## Verify waiting list entry for student2
     And I am on the "ConfirmBooking" Activity page logged in as student2
