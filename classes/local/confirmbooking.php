@@ -278,7 +278,7 @@ class confirmbooking implements confirmbooking_interface {
             // and include it in the main query.
             $sql = "
                 SELECT userid
-                FROM m_user_info_data uid
+                FROM {user_info_data} uid
                 WHERE uid.fieldid = :becsupervisorfieldid
                 AND
                 (
@@ -286,7 +286,7 @@ class confirmbooking implements confirmbooking_interface {
                     OR
                     uid.data IN (
                                     SELECT sup.userid::VARCHAR
-                                    FROM m_user_info_data sup
+                                    FROM {user_info_data} sup
                                     WHERE sup.fieldid = :becdeputyfieldid
                                     AND
                                     (
