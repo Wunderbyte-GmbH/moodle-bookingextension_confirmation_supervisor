@@ -1,5 +1,5 @@
 @mod @mod_booking @bookingextension @bookingextension_confirmation_supervisor @confirmation_suprevisor-confirmation_by_hr_supervisor_deputy
-Feature: In a course add a booking option and manage waiting list wiht supreviser confirmation
+Feature: In a course add a booking option and manage waiting list wiht HR, supreviser and deputy confirmations
   As an administrator I create a booking option wiht supreviser confirmation of waiting list
   I need to approve student on  waiting list as HR, supreviser and deputy
 
@@ -27,7 +27,7 @@ Feature: In a course add a booking option and manage waiting list wiht suprevise
     And I set userids "supervisor2" as value of profilefield "supervisor" for user "student2"
     And I set userids "supervisor2" as value of profilefield "supervisor" for user "student3"
     And I set userids "deputy1,deputy2" as value of profilefield "deputy" for user "supervisor1"
-    And I set userids "deputy1,deputy2" as value of profilefield "deputy" for user "supervisor2"
+    And I set userids "deputy1" as value of profilefield "deputy" for user "supervisor2"
     And the following config values are set as admin:
       | config                          | value      | plugin                                   |
       | confirmationtrainerenabled      |            | bookingextension_confirmation_trainer    |
@@ -73,11 +73,12 @@ Feature: In a course add a booking option and manage waiting list wiht suprevise
       | html      | User         | supervisor1 | my-index        | content       | 0             | Superv1 block | {"Tzo4OiJzdGRDbGFzcyI6Mzp7czo0OiJ0ZXh0IjtzOjM3OiI8cD5bbGlzdHRvYXBwcm92ZSBkZXB1dHlzZWxlY3Q9MV08L3A+IjtzOjU6InRpdGxlIjtzOjA6IiI7czo2OiJmb3JtYXQiO3M6MToiMSI7fQ=="} |
       | html      | User         | supervisor2 | my-index        | content       | 0             | Superv2 block | {"Tzo4OiJzdGRDbGFzcyI6Mzp7czo0OiJ0ZXh0IjtzOjM3OiI8cD5bbGlzdHRvYXBwcm92ZSBkZXB1dHlzZWxlY3Q9MV08L3A+IjtzOjU6InRpdGxlIjtzOjA6IiI7czo2OiJmb3JtYXQiO3M6MToiMSI7fQ=="} |
       | html      | User         | deputy1     | my-index        | content       | 0             | Deputy1 block | {"Tzo4OiJzdGRDbGFzcyI6Mzp7czo0OiJ0ZXh0IjtzOjM3OiI8cD5bbGlzdHRvYXBwcm92ZSBkZXB1dHlzZWxlY3Q9MV08L3A+IjtzOjU6InRpdGxlIjtzOjA6IiI7czo2OiJmb3JtYXQiO3M6MToiMSI7fQ=="} |
+      | html      | User         | deputy2     | my-index        | content       | 0             | Deputy2 block | {"Tzo4OiJzdGRDbGFzcyI6Mzp7czo0OiJ0ZXh0IjtzOjM3OiI8cD5bbGlzdHRvYXBwcm92ZSBkZXB1dHlzZWxlY3Q9MV08L3A+IjtzOjU6InRpdGxlIjtzOjA6IiI7czo2OiJmb3JtYXQiO3M6MToiMSI7fQ=="} |
     ## configdata contains serialized string "[listtoapprove deputyselect=1]"
     And I change viewport size to "1366x10000"
 
   @javascript
-  Scenario: Booking supervisor confirmation: confirm user on waiting list by HR than supervisor or deputy
+  Scenario: Booking supervisor confirmation: confirm user on waiting list by HR then supervisor or deputy
     Given the following "mod_booking > options" exist:
 ##      | booking        | text                 | course | description  | importing | teachersforoption | waitforconfirmation | confirmationsupervisorenabled | confirmationonnotification | confirmationtrainerenabled | chooseorcreatecourse | maxanswers | maxoverbooking | datesmarker | optiondateid_0 | daystonotify_0 | coursestarttime_0 | courseendtime_0 |
 ##      | ConfirmBooking | Option: confirmation | C1     | Confirmation | 1         | teacher1          | 1                   | 2                             | 0                          |                            | 1                    | 5          | 5              | 1           | 0              | 0              | ## tomorrow ##    | ## +2 days ##   |
@@ -90,6 +91,7 @@ Feature: In a course add a booking option and manage waiting list wiht suprevise
     And I am on the "ConfirmBooking" Activity page logged in as admin
     And I click on "Edit booking option" "icon" in the ".allbookingoptionstable_r1" "css_element"
     And I follow "Advanced options"
+    ## Test main objective: confirmation first by HR, then supervisor (or deputy if configured)
     And I set the field "Allow confirmation by supervisor" to "Confirmation first by HR, then supervisor"
     And I press "Save"
     And I click on "Settings" "icon" in the ".allbookingoptionstable_r1" "css_element"
@@ -189,6 +191,100 @@ Feature: In a course add a booking option and manage waiting list wiht suprevise
     And I should not see "Options to confirm"
     ##And I click on "Options to confirm" "text" in the "#accordion-heading-optionstoconfirm" "css_element"
     ##And I should see "You already confirmed" in the "#optionstoconfirm_optionstoconfirm_0_r1" "css_element"
+    And I log out
+    ## Verify booking for student3
+    And I am on the "ConfirmBooking" Activity page logged in as student3
+    And I should see "Start" in the ".allbookingoptionstable_r1" "css_element"
+    And I log out
+
+  @javascript
+  Scenario: Booking supervisor confirmation: confirm user on waiting list by supervisor or deputy
+    Given the following "mod_booking > options" exist:
+##      | booking        | text                 | course | description  | importing | teachersforoption | waitforconfirmation | confirmationsupervisorenabled | confirmationonnotification | confirmationtrainerenabled | chooseorcreatecourse | maxanswers | maxoverbooking | datesmarker | optiondateid_0 | daystonotify_0 | coursestarttime_0 | courseendtime_0 |
+##      | ConfirmBooking | Option: confirmation | C1     | Confirmation | 1         | teacher1          | 1                   | 2                             | 0                          |                            | 1                    | 5          | 5              | 1           | 0              | 0              | ## tomorrow ##    | ## +2 days ##   |
+      | booking        | text           | course | description | importing | teachersforoption | waitforconfirmation | chooseorcreatecourse | maxanswers | maxoverbooking | datesmarker | optiondateid_0 | daystonotify_0 | coursestarttime_0 | courseendtime_0 |
+      | ConfirmBooking | OptionConfirm1 | C1     | Confirm1    | 1         | teacher1          | 1                   | 1                    | 5          | 5              | 1           | 0              | 0              | ## tomorrow ##    | ## +3 days ##   |
+      | ConfirmBooking | OptionConfirm2 | C1     | Confirm2    | 1         | teacher1          | 1                   | 1                    | 5          | 5              | 1           | 0              | 0              | ## +2 days ##     | ## +4 days ##   |
+    And the following config values are set as admin:
+      | config                            | value | plugin  |
+      | waitinglistshowplaceonwaitinglist |       | booking |
+    And I am on the "ConfirmBooking" Activity page logged in as admin
+    And I click on "Edit booking option" "icon" in the ".allbookingoptionstable_r1" "css_element"
+    And I follow "Advanced options"
+    ## Test main objective: confirmation by supervisor (or deputy if configured)
+    And I set the field "Allow confirmation by supervisor" to "Confirmation by supervisor"
+    And I press "Save"
+    And I click on "Settings" "icon" in the ".allbookingoptionstable_r1" "css_element"
+    And I click on "Book other users" "link" in the ".allbookingoptionstable_r1" "css_element"
+    And I click on "Student 1 (student1@example.com)" "text"
+    And I click on "Student 2 (student2@example.com)" "text"
+    And I click on "Student 3 (student3@example.com)" "text"
+    When I click on "Add" "button"
+    And I click on "[data-bs-target='#accordion-item-waitinglist']" "css_element"
+    And I should see "Not allowed to confirm" in the "#accordion-item-waitinglist" "css_element"
+    And I log out
+    ## Verify waiting list entry for student2
+    And I am on the "ConfirmBooking" Activity page logged in as student2
+    And I should see "Wait for confirmation" in the ".allbookingoptionstable_r1" "css_element"
+    And I log out
+    ## Login as HR1, validate that no students to approve
+    And I log in as "hr1"
+    And I follow "Dashboard"    
+    And I should not see "Options to confirm"
+    And I log out
+    ## Login as supervisor2, validate block on Dashboard and approve student2
+    And I log in as "supervisor2"
+    And I follow "Dashboard"
+    And I click on "Options to confirm" "text" in the "#accordion-heading-optionstoconfirm" "css_element"
+    ## supervisor2: Validate and approve of stundet2
+    And I should see "student2@example.com" in the "#optionstoconfirm_optionstoconfirm_0_r1" "css_element"
+    And I should see "student3@example.com" in the "#optionstoconfirm_optionstoconfirm_0_r2" "css_element"
+    And I click on "#optionstoconfirm_optionstoconfirm_0_r1 .confirmbooking-username-student2 i" "css_element"
+    And I wait "1" seconds
+    And I click on "Book" "button" in the ".modal-footer" "css_element"
+    And I click on "Options to confirm" "text" in the "#accordion-heading-optionstoconfirm" "css_element"
+    And I should not see "student2@example.com" in the "#optionstoconfirm_optionstoconfirm_0_r1" "css_element"
+    And I should see "student3@example.com" in the "#optionstoconfirm_optionstoconfirm_0_r1" "css_element"
+    And I log out
+    ## Verify booking for student2
+    And I am on the "ConfirmBooking" Activity page logged in as student2
+    And I should see "Start" in the ".allbookingoptionstable_r1" "css_element"
+    And I log out
+    ## Login as deputy2, validate block on Dashboard and student1 listed there
+    And I log in as "deputy2"
+    And I follow "Dashboard"
+    ##And I wait "11" seconds
+    And I click on "Options to confirm" "text" in the "#accordion-heading-optionstoconfirm" "css_element"
+    And I should see "student1@example.com" in the "#optionstoconfirm_optionstoconfirm_0_r1" "css_element"
+    And I should not see "student3@example.com"
+    And I log out
+    ## Login as deputy1, validate block on Dashboard and approve student1 and student3
+    And I log in as "deputy1"
+    And I follow "Dashboard"
+    ##And I wait "11" seconds
+    And I click on "Options to confirm" "text" in the "#accordion-heading-optionstoconfirm" "css_element"
+    ## Deputy1: Validate and approve of stundet3
+    And I should see "student1@example.com" in the "#optionstoconfirm_optionstoconfirm_0_r1" "css_element"
+    And I should see "student3@example.com" in the "#optionstoconfirm_optionstoconfirm_0_r2" "css_element"
+    And I click on "#optionstoconfirm_optionstoconfirm_0_r1 .confirmbooking-username-student3 i" "css_element"
+    And I wait "1" seconds
+    And I click on "Book" "button" in the ".modal-footer" "css_element"
+    And I click on "Options to confirm" "text" in the "#accordion-heading-optionstoconfirm" "css_element"
+    And I should not see "student1@example.com" in the "#optionstoconfirm_optionstoconfirm_0_r1" "css_element"
+    And I should see "student3@example.com" in the "#optionstoconfirm_optionstoconfirm_0_r1" "css_element"
+    And I click on "#optionstoconfirm_optionstoconfirm_0_r1 .confirmbooking-username-student3 i" "css_element"
+    And I wait "1" seconds
+    And I click on "Book" "button" in the ".modal-footer" "css_element"
+    And I should not see "Options to confirm"
+    And I log out   
+    ## Login as supervisor1, validate that no more students to approve
+    And I log in as "supervisor1"
+    And I follow "Dashboard"    
+    And I should not see "Options to confirm"
+    And I log out
+    ## Verify booking for student1
+    And I am on the "ConfirmBooking" Activity page logged in as student1
+    And I should see "Start" in the ".allbookingoptionstable_r1" "css_element"
     And I log out
     ## Verify booking for student3
     And I am on the "ConfirmBooking" Activity page logged in as student3
