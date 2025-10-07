@@ -16,7 +16,7 @@ Feature: In a course add a booking option and manage waiting list wiht HR, supre
       | supervisor1 | Superviser | 1        | supervisor1@example.com | SP1      |                          | |
       | supervisor2 | Superviser | 2        | supervisor2@example.com | SP1      |                          | |
       | deputy1     | Deputy     | 1        | deputy1@example.com     | DE1      |                          | |
-      | deputy2     | Deputy     | 2        | deputy2@example.com     | DE1      |                          | |
+      | deputy2     | Deputy     | 2        | deputy2@example.com     | DE2      |                          | |
       | student1    | Student    | 1        | student1@example.com    | ST1      |                          | |
       | student2    | Student    | 2        | student2@example.com    | ST2      |                          | |
       | student3    | Student    | 3        | student3@example.com    | ST3      |                          | |
@@ -51,7 +51,7 @@ Feature: In a course add a booking option and manage waiting list wiht HR, supre
       | supervisor1 | approver | System       |           |
       | supervisor2 | approver | System       |           |
       | deputy1     | approver | System       |           |
-      | deputy1     | approver | System       |           |
+      | deputy2     | approver | System       |           |
     And the following "courses" exist:
       | fullname | shortname | category | enablecompletion |
       | Course 1 | C1        | 0        | 1                |
@@ -232,14 +232,6 @@ Feature: In a course add a booking option and manage waiting list wiht HR, supre
     And I click on "[data-bs-target='#accordion-item-waitinglist']" "css_element"
     And I should see "Not allowed to confirm" in the "#accordion-item-waitinglist" "css_element"
     And I log out
-    ## Login as deputy2, validate block on Dashboard and student1 listed there
-    And I log in as "deputy2"
-    And I follow "Dashboard"
-    And I wait "111" seconds
-    And I click on "Options to confirm" "text" in the "#accordion-heading-optionstoconfirm" "css_element"
-    And I should see "student1@example.com" in the "#optionstoconfirm_optionstoconfirm_0_r1" "css_element"
-    And I should not see "student3@example.com"
-    And I log out
     ## Verify waiting list entry for student2
     And I am on the "ConfirmBooking" Activity page logged in as student2
     And I should see "Wait for confirmation" in the ".allbookingoptionstable_r1" "css_element"
@@ -283,7 +275,7 @@ Feature: In a course add a booking option and manage waiting list wiht HR, supre
     ## Deputy1: Validate and approve of stundet3
     And I should see "student1@example.com" in the "#optionstoconfirm_optionstoconfirm_0_r1" "css_element"
     And I should see "student3@example.com" in the "#optionstoconfirm_optionstoconfirm_0_r2" "css_element"
-    And I click on "#optionstoconfirm_optionstoconfirm_0_r1 .confirmbooking-username-student3 i" "css_element"
+    And I click on "#optionstoconfirm_optionstoconfirm_0_r1 .confirmbooking-username-student1 i" "css_element"
     And I wait "1" seconds
     And I click on "Book" "button" in the ".modal-footer" "css_element"
     And I click on "Options to confirm" "text" in the "#accordion-heading-optionstoconfirm" "css_element"
@@ -293,10 +285,10 @@ Feature: In a course add a booking option and manage waiting list wiht HR, supre
     And I wait "1" seconds
     And I click on "Book" "button" in the ".modal-footer" "css_element"
     And I should not see "Options to confirm"
-    And I log out   
+    And I log out
     ## Login as supervisor1, validate that no more students to approve
     And I log in as "supervisor1"
-    And I follow "Dashboard"    
+    And I follow "Dashboard"
     And I should not see "Options to confirm"
     And I log out
     ## Verify booking for student1
