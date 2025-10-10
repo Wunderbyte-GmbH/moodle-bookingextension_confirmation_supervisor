@@ -155,7 +155,7 @@ class confirmation_supervisor extends field_base {
             return $changes;
         }
 
-        $newvalue = $formdata->confirmationsupervisorenabled;
+        $newvalue = $formdata->confirmationsupervisorenabled ?? null;
         $oldvalue = booking_option::get_value_of_json_by_key($formdata->id, "confirmationsupervisorenabled");
 
         if ($newvalue != $oldvalue) {
