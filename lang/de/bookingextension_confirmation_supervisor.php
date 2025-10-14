@@ -33,6 +33,7 @@ $string['bookingextensionconfirmationsupervisor:heading_desc'] = 'Die Bestätigu
 Zusätzlich ist es möglich, Stellvertretungen zu ernennen. Hierfür müssen in das ausgewählte Profilfeld des/der Vorgesetzten die User-IDs der Stellvertretenden eingetragen werden. Diese haben dann alle Rechte, die auch die Vorgesetzten haben.
 Diese Funktion kann mit fixen Nutzer/innen kombiniert werden ("confirmation_supervisor_hrusers"). Wird zusätzlich die standardmäßige "Bestätigung durch Trainer:in" ausgewählt, haben Trainer:innen ebenfalls die Möglichkeit zu bestätigen.
 Ausführliche Einstellungen zur Bestätigung einzelner Buchungsoptionen lassen sich in den jeweiligen Einstellungen festlegen (z. B. die Reihenfolge des Bestätigungsprozesses).';
+$string['confirmationsupervisor'] = 'Bestätigung durch Vorgesetzte';
 $string['confirmationsupervisorenabled'] = 'Erlaube Bestätigung durch Vorgesetzte';
 $string['confirmbyhr'] = 'Bestätigung durch Personalabteilung';
 $string['confirmbyhrsupervisor'] = 'Bestätigung erst durch Personalabteilung, dann Vorgesetzte:n';
