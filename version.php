@@ -24,7 +24,7 @@
  */
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version   = 2025100600;
+$plugin->version   = 2025102300;
 $plugin->requires  = 2024042200; // Requires this Moodle version. Current: Moodle 4.4.
 $plugin->component = 'bookingextension_confirmation_supervisor';
 $plugin->supported = [404, 405];
