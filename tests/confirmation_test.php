@@ -121,6 +121,7 @@ final class confirmation_test extends advanced_testcase {
         $deputy3 = $this->getDataGenerator()->create_user();
         $deputy4 = $this->getDataGenerator()->create_user();
         $deputy5 = $this->getDataGenerator()->create_user();
+        $bookingmanager = $this->getDataGenerator()->create_user();
 
         // Set custom profile field 'supervisor'.
         profile_save_data((object)['id' => $student1->id, 'profile_field_supervisor' => $supervisor1->id]);
@@ -141,7 +142,6 @@ final class confirmation_test extends advanced_testcase {
         }
 
         // Create booking module.
-        $bookingmanager = $this->getDataGenerator()->create_user();
         $booking = $this->getDataGenerator()->create_module('booking', [
             'course' => $course->id,
             'bookingmanager' => $bookingmanager->username,
@@ -252,7 +252,8 @@ final class confirmation_test extends advanced_testcase {
 
         [$id, $isavailable, $description] = $boinfo->is_available($settings->id, $student1->id, true);
         $this->assertEquals(MOD_BOOKING_BO_COND_ASKFORCONFIRMATION, $id);
-        $result = booking_bookit::bookit('option', $settings->id, $student1->id); // Book the first user.
+        $result = booking_bookit::bookit('option', $settings->id, $student1->id); // Attempt to book.
+        $result = booking_bookit::bookit('option', $settings->id, $student1->id); // Confirm to book.
 
         [$id, $isavailable, $description] = $boinfo->is_available($settings->id, $student1->id, true);
         $this->assertEquals(MOD_BOOKING_BO_COND_ONWAITINGLIST, $id);
@@ -302,6 +303,8 @@ final class confirmation_test extends advanced_testcase {
 
         $this->resetAfterTest(true);
 
+        $this->preventResetByRollback();
+
         // Initial config.
         $env = $this->setup_booking_environment(0, $order);
         $users = $env['users'];
@@ -319,7 +322,8 @@ final class confirmation_test extends advanced_testcase {
         $this->setUser($student1);
         [$id, $isavailable, $description] = $boinfo->is_available($settings->id, $student1->id, true);
         $this->assertEquals(MOD_BOOKING_BO_COND_ASKFORCONFIRMATION, $id);
-        $result = booking_bookit::bookit('option', $settings->id, $student1->id); // Book the first user.
+        $result = booking_bookit::bookit('option', $settings->id, $student1->id); // Attempt to book.
+        $result = booking_bookit::bookit('option', $settings->id, $student1->id); // Confirm to book.
         [$id, $isavailable, $description] = $boinfo->is_available($settings->id, $student1->id, true);
         $this->assertEquals(MOD_BOOKING_BO_COND_ONWAITINGLIST, $id);
 
@@ -327,7 +331,8 @@ final class confirmation_test extends advanced_testcase {
         $this->setUser($student2);
         [$id, $isavailable, $description] = $boinfo->is_available($settings->id, $student2->id, true);
         $this->assertEquals(MOD_BOOKING_BO_COND_ASKFORCONFIRMATION, $id);
-        $result = booking_bookit::bookit('option', $settings->id, $student2->id); // Book the 2nd user.
+        $result = booking_bookit::bookit('option', $settings->id, $student2->id); // Attempt to book.
+        $result = booking_bookit::bookit('option', $settings->id, $student2->id); // Confirm to book.
         [$id, $isavailable, $description] = $boinfo->is_available($settings->id, $student2->id, true);
         $this->assertEquals(MOD_BOOKING_BO_COND_ONWAITINGLIST, $id);
 
@@ -474,7 +479,8 @@ final class confirmation_test extends advanced_testcase {
         $studnetkeys = ['student1', 'student2', 'student3', 'student4', 'student5'];
         foreach ($studnetkeys as $skey) {
             $this->setUser($users[$skey]);
-            booking_bookit::bookit('option', $settings->id, $users[$skey]->id);
+            booking_bookit::bookit('option', $settings->id, $users[$skey]->id); // Attempt to book.
+            booking_bookit::bookit('option', $settings->id, $users[$skey]->id); // Confirm to book.
         }
 
         // Get answers.
