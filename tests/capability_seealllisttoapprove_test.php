@@ -48,6 +48,7 @@ final class capability_seealllisttoapprove_test extends advanced_testcase {
         global $DB, $USER;
 
         $this->resetAfterTest(true);
+        $this->preventResetByRollback();
 
         $this->setAdminUser();
         $admin = $USER;
@@ -166,13 +167,21 @@ final class capability_seealllisttoapprove_test extends advanced_testcase {
         foreach ($notallowedusers as $key) {
             $this->setUser($users[$key]);
             $viewingtable = $this->get_booked_users_table();
-            $this->assertCount(0, $viewingtable->rawdata);
+            $this->assertCount(
+                0,
+                $viewingtable->rawdata,
+                'The user (' . $key . ') must not access the answers via the listtoapprove shortcode.'
+            );
         }
 
         foreach ($allowedusers as $key) {
             $this->setUser($users[$key]);
             $viewingtable = $this->get_booked_users_table();
-            $this->assertCount(2, $viewingtable->rawdata);
+            $this->assertCount(
+                2,
+                $viewingtable->rawdata,
+                'The user (' . $key . ') must access the answers via the listtoapprove shortcode.'
+            );
             $usersids = array_map(fn($record) => $record->userid, $viewingtable->rawdata);
             $this->assertContains($student1->id, $usersids);
             $this->assertContains($student2->id, $usersids);
