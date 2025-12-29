@@ -370,6 +370,10 @@ final class confirmation_test extends advanced_testcase {
             // confirm out of order.
             $outoforder = array_filter($alloweduserkeys, fn($k) => $k !== $key);
             foreach ($outoforder as $wrongkey) {
+                // Site admins can confirm answers regardless of capabilities and priorities, so we skip admins.
+                if ($wrongkey === 'admin') {
+                    continue;
+                }
                 // Ensure user cannot confirm it.
                 $this->setUser($users[$wrongkey]);
                 $result = $mutable->action_confirmbooking(0, json_encode(['id' => $student1answer->baid])); // Confirm answer.
@@ -559,101 +563,116 @@ final class confirmation_test extends advanced_testcase {
         return [
             'Only supervsior --> by Supervisor' => [
                 1, // Confirmation order.
-                ['supervisor1', 'admin'], // Allowed users (Order of keys is important).
+                ['supervisor1'], // Allowed users (Order of keys is important).
                 ['teacher', 'manager', 'hr1'], // Not allowed users.
                 1, // Number of required confirmations.
                 ['supervisor1' => ['deputy1', 'deputy2']], // Users replacements.
             ],
             'Only supervsior --> by Deputy 1' => [
                 1,
-                ['deputy1', 'admin'],
+                ['deputy1'],
                 ['teacher', 'manager', 'hr1', 'hr2'],
                 1,
                 ['deputy1' => ['deputy2', 'supervisor1']],
             ],
             'Only supervsior --> by Deputy 2' => [
                 1,
-                ['deputy2', 'admin'],
+                ['deputy2'],
                 ['teacher', 'manager', 'hr1'],
                 1,
                 ['deputy1' => ['deputy2', 'supervisor1']],
             ],
             'HR then supervisor --> by Supervisor 1' => [
                 2,
-                ['hr1', 'supervisor1', 'admin'],
+                ['hr1', 'supervisor1'],
                 ['teacher', 'manager'],
                 2,
                 ['supervisor1' => ['deputy1', 'deputy2'], 'hr1' => ['hr2']],
             ],
             'HR then supervisor --> by Deputy 1' => [
                 2,
-                ['hr1', 'deputy1', 'admin'],
+                ['hr1', 'deputy1'],
                 ['teacher', 'manager'],
                 2,
                 ['deputy1' => ['deputy2', 'supervisor1'], 'h1' => ['hr2']],
             ],
             'HR then supervisor --> by Deputy 2' => [
                 2,
-                ['hr1', 'deputy2', 'admin'],
+                ['hr1', 'deputy2'],
                 ['teacher', 'manager'],
                 2,
                 ['deputy2' => ['deputy1', 'supervisor1'], 'h1' => ['hr2']],
             ],
             'Only HR --> by HR1' => [
                 3,
-                ['hr1', 'admin'],
+                ['hr1'],
                 ['teacher', 'manager', 'supervisor1', 'deputy1', 'deputy2'],
                 1,
                 ['hr1' => ['hr2']],
             ],
             'Only HR --> by HR2' => [
                 3,
-                ['hr2', 'admin'],
+                ['hr2'],
                 ['teacher', 'manager', 'supervisor1'],
                 1,
                 ['hr' => ['hr1']],
             ],
             'Supervisor then HR --> by Supervisor 1' => [
                 4,
-                ['supervisor1', 'hr1', 'admin'],
+                ['supervisor1', 'hr1'],
                 ['teacher', 'manager'],
                 2,
                 ['supervisor1' => ['deputy1', 'deputy2'], 'hr1' => ['hr2']],
             ],
             'Supervisor then HR --> by Deputy 1' => [
                 4,
-                ['deputy1', 'hr1', 'admin'],
+                ['deputy1', 'hr1'],
                 ['teacher', 'manager'],
                 2,
                 ['deputy1' => ['deputy2', 'supervisor1'], 'h1' => ['hr2']],
             ],
             'Supervisor then HR --> by Deputy 2' => [
                 4,
-                ['deputy2', 'hr1', 'admin'],
+                ['deputy2', 'hr1'],
                 ['teacher', 'manager'],
                 2,
                 ['deputy2' => ['deputy1', 'supervisor1'], 'h1' => ['hr2']],
             ],
             'Supervisor or HR --> by HR' => [
                 5,
-                ['hr1', 'admin'],
+                ['hr1'],
                 ['teacher', 'manager'],
                 1,
                 ['hr1' => ['hr2', 'supervisor1', 'deputy1', 'deputy2']],
             ],
             'Supervisor or HR --> by Supervisor' => [
                 5,
-                ['supervisor1', 'admin'],
+                ['supervisor1'],
                 ['teacher', 'manager'],
                 1,
                 ['supervisor1' => ['hr1', 'hr2', 'deputy1', 'deputy2']],
             ],
             'Supervisor or HR --> by Deputy1' => [
                 5,
-                ['deputy1', 'admin'],
+                ['deputy1'],
                 ['teacher', 'manager'],
                 1,
                 ['deputy1' => ['hr1', 'hr2', 'supervisor1', 'deputy2']],
+            ],
+            // Admin.
+            'Supervisor or HR --> by Admin' => [
+                5,
+                ['admin'],
+                ['teacher', 'manager'],
+                1,
+                [],
+            ],
+            'Supervisor then HR --> by Admin' => [
+                4,
+                ['admin', 'hr1'],
+                ['teacher', 'manager'],
+                2,
+                ['deputy2' => ['deputy1', 'supervisor1'], 'h1' => ['hr2']],
             ],
         ];
     }
