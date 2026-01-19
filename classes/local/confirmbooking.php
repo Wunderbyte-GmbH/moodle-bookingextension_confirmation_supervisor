@@ -25,6 +25,7 @@
 
 namespace bookingextension_confirmation_supervisor\local;
 
+use context_system;
 use mod_booking\local\interfaces\bookingextension\confirmbooking_interface;
 use context_module;
 use mod_booking\singleton_service;
@@ -265,7 +266,10 @@ class confirmbooking implements confirmbooking_interface {
         // Core JSON confirmation field.
         $waitforconfirmation = "(bo.json::jsonb ->> 'waitforconfirmation')::int IN (1,2)";
 
-        if ($ishr) {
+        if (has_capability('mod/booking:seealllisttoapprove', context_system::instance())) {
+            // Admin & all persons who have seealllisttoapprove capability can see all answers.
+            return "$waitforconfirmation";
+        } else if ($ishr) {
             // HR should see 2, 3, 4, 5.
             $conflevel = "(bo.json::jsonb ->> 'confirmationsupervisorenabled')::int IN (2,3,4,5)";
 
