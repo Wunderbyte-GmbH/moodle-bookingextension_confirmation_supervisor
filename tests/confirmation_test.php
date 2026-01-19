@@ -370,7 +370,7 @@ final class confirmation_test extends advanced_testcase {
             // confirm out of order.
             $outoforder = array_filter($alloweduserkeys, fn($k) => $k !== $key);
             foreach ($outoforder as $wrongkey) {
-                // Site admins can confirm answers regardless of capabilities and priorities, so we skip admins.
+                // Site admins can confirm answers regardless of priorities, so we skip admins.
                 if ($wrongkey === 'admin') {
                     continue;
                 }
