@@ -357,7 +357,10 @@ class confirmbooking implements confirmbooking_interface {
         // Core JSON confirmation field.
         $waitforconfirmation = "CAST(JSON_UNQUOTE(JSON_EXTRACT(bo.json, '$.waitforconfirmation')) AS UNSIGNED) > 0";
 
-        if ($ishr) {
+        if (has_capability('mod/booking:seealllisttoapprove', context_system::instance())) {
+            // Admin & all persons who have seealllisttoapprove capability can see all answers.
+            return "$waitforconfirmation";
+        } else if ($ishr) {
             // HR should see 2, 3, 4, 5.
             $conflevel = "CAST(JSON_UNQUOTE(JSON_EXTRACT(bo.json, '$.confirmationsupervisorenabled')) AS UNSIGNED) IN (2,3,4,5)";
             return "$waitforconfirmation AND $conflevel";
