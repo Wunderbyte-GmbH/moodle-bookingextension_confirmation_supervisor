@@ -102,7 +102,9 @@ Feature: In a course add a booking option and manage waiting list wiht HR, supre
     And I click on "Student 3 (student3@example.com)" "text"
     When I click on "Add" "button"
     And I click on "[data-bs-target='#accordion-item-waitinglist']" "css_element"
-    And I should see "Not allowed to confirm" in the "#accordion-item-waitinglist" "css_element"
+    # We commented out the next line because of new functionality which allow admin to confirm answers
+    # on the waiting list via the canalwayscanconfirm capability.
+    # And I should see "Not allowed to confirm" in the "#accordion-item-waitinglist" "css_element"
     And I log out
     ## Verify waiting list entry for student1
     And I am on the "ConfirmBooking" Activity page logged in as student1
@@ -230,7 +232,10 @@ Feature: In a course add a booking option and manage waiting list wiht HR, supre
     And I click on "Student 3 (student3@example.com)" "text"
     When I click on "Add" "button"
     And I click on "[data-bs-target='#accordion-item-waitinglist']" "css_element"
-    And I should see "Not allowed to confirm" in the "#accordion-item-waitinglist" "css_element"
+    And I wait "30" seconds
+    # We commented out the next line because of new functionality which allow admin to confirm answers
+    # on the waiting list via the canalwayscanconfirm capability.
+    # And I should see "Not allowed to confirm" in the "#accordion-item-waitinglist" "css_element"
     And I log out
     ## Verify waiting list entry for student2
     And I am on the "ConfirmBooking" Activity page logged in as student2
@@ -322,7 +327,9 @@ Feature: In a course add a booking option and manage waiting list wiht HR, supre
     And I click on "Student 3 (student3@example.com)" "text"
     When I click on "Add" "button"
     And I click on "[data-bs-target='#accordion-item-waitinglist']" "css_element"
-    And I should see "Not allowed to confirm" in the "#accordion-item-waitinglist" "css_element"
+    # We commented out the next line because of new functionality which allow admin to confirm answers
+    # on the waiting list via the canalwayscanconfirm capability.
+    # And I should see "Not allowed to confirm" in the "#accordion-item-waitinglist" "css_element"
     And I log out
     ## Verify waiting list entry for student3
     And I am on the "ConfirmBooking" Activity page logged in as student3
