@@ -17,15 +17,18 @@
 namespace bookingextension_confirmation_supervisor;
 
 use advanced_testcase;
-use mod_booking\output\booked_users;
 use mod_booking\singleton_service;
 use mod_booking\booking_bookit;
 use mod_booking\bo_availability\bo_info;
 use mod_booking\booking_answers\booking_answers;
 use mod_booking\table\manageusers_table;
-use local_wunderbyte_table\wunderbyte_table;
 use mod_booking_generator;
-use context_module;
+use context_system;
+
+defined('MOODLE_INTERNAL') || die();
+
+global $CFG;
+require_once($CFG->dirroot . '/lib/accesslib.php');
 
 /**
  * Tests for Confirmation workflow by supervisor
@@ -97,6 +100,12 @@ final class capability_alwayscanconfirm_test extends advanced_testcase {
         $this->getDataGenerator()->enrol_user($student3->id, $course->id, 'student');
         $this->getDataGenerator()->enrol_user($student4->id, $course->id, 'student');
         $this->getDataGenerator()->enrol_user($student5->id, $course->id, 'student');
+
+        // Create a test role and assign the alwayscanconfirm capability to it, then assign to admin and manager.
+        $roleid = $this->getDataGenerator()->create_role();
+        assign_capability('mod/booking:alwayscanapprove', CAP_ALLOW, $roleid, context_system::instance());
+        role_assign($roleid, $admin->id, context_system::instance()->id);
+        role_assign($roleid, $manager->id, context_system::instance()->id);
 
         return [
             'course' => $course,
@@ -177,7 +186,7 @@ final class capability_alwayscanconfirm_test extends advanced_testcase {
             $result = $mutable->action_confirmbooking(0, json_encode(['id' => $student1answer->baid])); // Confirm answer.
             $this->assertEquals(1, $result['success']); // Make sure confirmation is not successful.
 
-            // Now we confirm student 1's booking answer. The approver should be able to confirm it.
+            // Now we confirm student 2's booking answer. The approver should be able to confirm it.
             $result = $mutable->action_confirmbooking(0, json_encode(['id' => $student2answer->baid])); // Confirm answer.
             $this->assertEquals(1, $result['success']); // Make sure confirmation is not successful.
         }
@@ -245,8 +254,6 @@ final class capability_alwayscanconfirm_test extends advanced_testcase {
                 5,
                 ['manager'],
             ],
-
-
         ];
     }
 }
