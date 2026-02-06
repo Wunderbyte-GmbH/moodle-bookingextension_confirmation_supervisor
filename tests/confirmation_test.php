@@ -252,8 +252,12 @@ final class confirmation_test extends advanced_testcase {
 
         [$id, $isavailable, $description] = $boinfo->is_available($settings->id, $student1->id, true);
         $this->assertEquals(MOD_BOOKING_BO_COND_ASKFORCONFIRMATION, $id);
-        $result = booking_bookit::bookit('option', $settings->id, $student1->id); // Book the first user.
 
+        $result = booking_bookit::bookit('option', $settings->id, $student1->id); // Book the first user.
+        [$id, $isavailable, $description] = $boinfo->is_available($settings->id, $student1->id, true);
+        $this->assertEquals(MOD_BOOKING_BO_COND_CONFIRMASKFORCONFIRMATION, $id);
+
+        $result = booking_bookit::bookit('option', $settings->id, $student1->id); // Book the first user.
         [$id, $isavailable, $description] = $boinfo->is_available($settings->id, $student1->id, true);
         $this->assertEquals(MOD_BOOKING_BO_COND_ONWAITINGLIST, $id);
 
@@ -319,6 +323,11 @@ final class confirmation_test extends advanced_testcase {
         $this->setUser($student1);
         [$id, $isavailable, $description] = $boinfo->is_available($settings->id, $student1->id, true);
         $this->assertEquals(MOD_BOOKING_BO_COND_ASKFORCONFIRMATION, $id);
+
+        $result = booking_bookit::bookit('option', $settings->id, $student1->id); // Book the first user.
+        [$id, $isavailable, $description] = $boinfo->is_available($settings->id, $student1->id, true);
+        $this->assertEquals(MOD_BOOKING_BO_COND_CONFIRMASKFORCONFIRMATION, $id);
+
         $result = booking_bookit::bookit('option', $settings->id, $student1->id); // Book the first user.
         [$id, $isavailable, $description] = $boinfo->is_available($settings->id, $student1->id, true);
         $this->assertEquals(MOD_BOOKING_BO_COND_ONWAITINGLIST, $id);
@@ -327,6 +336,11 @@ final class confirmation_test extends advanced_testcase {
         $this->setUser($student2);
         [$id, $isavailable, $description] = $boinfo->is_available($settings->id, $student2->id, true);
         $this->assertEquals(MOD_BOOKING_BO_COND_ASKFORCONFIRMATION, $id);
+
+        $result = booking_bookit::bookit('option', $settings->id, $student2->id); // Book the first user.
+        [$id, $isavailable, $description] = $boinfo->is_available($settings->id, $student2->id, true);
+        $this->assertEquals(MOD_BOOKING_BO_COND_CONFIRMASKFORCONFIRMATION, $id);
+
         $result = booking_bookit::bookit('option', $settings->id, $student2->id); // Book the 2nd user.
         [$id, $isavailable, $description] = $boinfo->is_available($settings->id, $student2->id, true);
         $this->assertEquals(MOD_BOOKING_BO_COND_ONWAITINGLIST, $id);
@@ -475,6 +489,12 @@ final class confirmation_test extends advanced_testcase {
         foreach ($studnetkeys as $skey) {
             $this->setUser($users[$skey]);
             booking_bookit::bookit('option', $settings->id, $users[$skey]->id);
+            [$id, $isavailable, $description] = $boinfo->is_available($settings->id, $users[$skey]->id, true);
+            $this->assertEquals(MOD_BOOKING_BO_COND_CONFIRMASKFORCONFIRMATION, $id);
+
+            $result = booking_bookit::bookit('option', $settings->id, $users[$skey]->id);
+            [$id, $isavailable, $description] = $boinfo->is_available($settings->id, $users[$skey]->id, true);
+            $this->assertEquals(MOD_BOOKING_BO_COND_ONWAITINGLIST, $id);
         }
 
         // Get answers.
