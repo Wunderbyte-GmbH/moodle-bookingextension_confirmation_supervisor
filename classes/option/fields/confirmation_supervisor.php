@@ -113,7 +113,11 @@ class confirmation_supervisor extends field_base {
         if (
             isset($formdata->waitforconfirmation)
         ) {
-            booking_option::add_data_to_json($newoption, "confirmationsupervisorenabled", $formdata->confirmationsupervisorenabled);
+            booking_option::add_data_to_json(
+                $newoption,
+                "confirmationsupervisorenabled",
+                $formdata->confirmationsupervisorenabled ?? 0
+            );
         }
         $instance = new confirmation_supervisor();
         $mockdata = new stdClass();
