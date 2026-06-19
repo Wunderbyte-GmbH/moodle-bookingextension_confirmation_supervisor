@@ -34,6 +34,8 @@ use mod_booking\singleton_service;
  * Class to confirmbookings
  */
 class confirmbooking implements confirmbooking_interface {
+    use supervisor_relation_trait;
+
     /**
      * We use this property to decide about the restrictions.
      * When true, the supervisor can see & confirm all answers regardless of demand order settings.
@@ -437,89 +439,4 @@ class confirmbooking implements confirmbooking_interface {
         return 0;  // When the option 'no confirmation needed' is selected in booking option settings.
     }
 
-    /**
-     * Determines if user is HR.
-     * @param mixed $approverid
-     * @return bool
-     */
-    private static function is_hr($approverid): bool {
-        // Check if user is HR. So we need to check bookig extension configuration.
-        $hrids = explode(
-            ',',
-            get_config('bookingextension_confirmation_supervisor', 'confirmation_supervisor_hrusers')
-        );
-
-        return in_array($approverid, $hrids);
-    }
-
-    /**
-     * Determines if approver is supervisor if given user.
-     * @param mixed $approverid
-     * @param mixed $userid
-     * @return bool
-     */
-    private static function is_supervisor($approverid, $userid): bool {
-        $supervisorfieldshortname = get_config('bookingextension_confirmation_supervisor', 'supervisor');
-        $user = singleton_service::get_instance_of_user($userid, true);
-        if (
-            $user
-            && isset($user->profile[$supervisorfieldshortname])
-            && $user->profile[$supervisorfieldshortname] == $approverid
-        ) {
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * Determines if appriver is deputy of the supervisor of the given user.
-     * @param mixed $approverid
-     * @param mixed $userid
-     * @return bool
-     */
-    private static function is_deputy($approverid, $userid) {
-        $supervisorfield = get_config('bookingextension_confirmation_supervisor', 'supervisor');
-        $user = singleton_service::get_instance_of_user($userid, true);
-        if ($user && !empty($user->profile[$supervisorfield])) {
-            // Found the supervisor of the user. (user is owner of the answer).
-            $svid = $user->profile[$supervisorfield]; // Supervisor ID.
-            $sv = singleton_service::get_instance_of_user($svid, true); // Supervisor.
-
-            if ($sv) {
-                $deputies = self::get_deputies($sv);
-                foreach ($deputies as $deputyid) {
-                    if ($deputyid == $approverid) {
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Returns deputies of as an array of integers.
-     * @param mixed $user
-     * @return string[]
-     */
-    public static function get_deputies($user = null): array {
-        if (empty($user)) {
-            global $USER;
-            $user = $USER;
-        }
-
-        if (empty($user)) {
-            return [];
-        }
-
-        // Load custom profile fileds if not exists in user object.
-        $user = singleton_service::get_instance_of_user($user->id, true);
-
-        $deputyfield = get_config('bookingextension_confirmation_supervisor', 'deputy');
-        if ($user && isset($user->profile[$deputyfield]) && !empty($user->profile[$deputyfield])) {
-            // Deputy Found.
-            return explode(',', $user->profile[$deputyfield]);
-        }
-        return [];
-    }
 }
