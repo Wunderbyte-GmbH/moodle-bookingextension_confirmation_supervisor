@@ -6,6 +6,7 @@ jobs:
   moodle500to501:
     uses: Wunderbyte-GmbH/catalyst-moodle-workflows/.github/workflows/ci.yml@main
     with:
+      enable_self_hosted_ci: true
       # Change these based on your plugin's requirements
       disable_release: true  # Use true if using the tag-based release workflow
       moodle_branches: "MOODLE_500_STABLE MOODLE_501_STABLE"  # Optional: Only test specific Moodle versions
@@ -86,6 +87,7 @@ jobs:
   moodle405:
     uses: Wunderbyte-GmbH/catalyst-moodle-workflows/.github/workflows/ci.yml@main
     with:
+      enable_self_hosted_ci: true
       # Change these based on your plugin's requirements
       disable_release: true  # Use true if using the tag-based release workflow
       moodle_branches: "MOODLE_405_STABLE"  # Optional: Only test specific Moodle versions
