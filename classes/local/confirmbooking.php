@@ -438,5 +438,4 @@ class confirmbooking implements confirmbooking_interface {
 
         return 0;  // When the option 'no confirmation needed' is selected in booking option settings.
     }
-
 }
