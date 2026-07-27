@@ -131,6 +131,14 @@ class confirmation_supervisor extends bookingextension implements bookingextensi
             0
         ));
 
+        // Checkbox to limit the answers a supervisor sees to the answers of their own team.
+        $settings->add(new admin_setting_configcheckbox(
+            'bookingextension_confirmation_supervisor/restricttrackertomyteam',
+            get_string('restricttrackertomyteam', 'bookingextension_confirmation_supervisor'),
+            get_string('restricttrackertomyteam_desc', 'bookingextension_confirmation_supervisor'),
+            0
+        ));
+
         $settings->add(
             new admin_setting_configselect(
                 'bookingextension_confirmation_supervisor/defaultconfirmationorder',
