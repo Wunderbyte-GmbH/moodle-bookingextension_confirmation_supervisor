@@ -190,6 +190,45 @@ final class answersrestriction_test extends advanced_testcase {
     }
 
     /**
+     * The main table of the legacy report.php builds its own sql and adds the restriction to
+     * $addsqlwhere. This verifies that the clause works with the aliases used there.
+     *
+     * @covers \mod_booking\booking_answers\scope_base::get_answers_restriction_sql
+     */
+    public function test_restriction_works_with_the_report_php_query(): void {
+        global $DB;
+
+        $env = $this->setup_booking_environment();
+        $this->activate_restriction();
+        $optionid = (int) $env['settings']->id;
+
+        $this->setUser($env['users']['supervisor1']);
+        answersrestriction::reset_static_cache();
+
+        // The where part of report.php, including the restriction it appends to $addsqlwhere.
+        $sqlvalues = ['optionid' => $optionid];
+        $scope = (new \mod_booking\booking_answers\booking_answers())->return_class_for_scope('option');
+        $addsqlwhere = $scope->get_answers_restriction_sql('ba.userid', $optionid, $sqlvalues);
+
+        $rows = $DB->get_records_sql(
+            "SELECT ba.id, ba.userid
+             FROM {booking_answers} ba
+             JOIN {user} u ON u.id = ba.userid
+             JOIN {booking_options} bo ON bo.id = ba.optionid
+             WHERE ba.optionid = :optionid AND ba.waitinglist < 2 $addsqlwhere",
+            $sqlvalues
+        );
+
+        $this->assertEqualsCanonicalizing(
+            [
+                (int) $env['users']['student1']->id,
+                (int) $env['users']['supervisor1']->id,
+            ],
+            array_map(fn($row) => (int) $row->userid, array_values($rows))
+        );
+    }
+
+    /**
      * Helper: activates the setting and drops the static cache of the restriction.
      *
      * @return void
