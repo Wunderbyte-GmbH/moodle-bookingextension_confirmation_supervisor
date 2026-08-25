@@ -44,6 +44,18 @@ class confirmbooking implements confirmbooking_interface {
     public $supervisorteam = false;
 
     /**
+     * Whether the given user is a PE (HR): listed in the confirmation_supervisor_hrusers
+     * setting. Public so other confirmation workflows (e.g. the trainer workflow) can route
+     * PEs through the supervisor workflow instead of their own.
+     *
+     * @param int $userid
+     * @return bool
+     */
+    public static function is_pe(int $userid): bool {
+        return self::is_hr($userid);
+    }
+
+    /**
      * A subplugin can implement it's own way to add ways to allow supervisors to approve requests on waitinglist.
      * If the first value in the aray is true, this means that the test was successful.
      *
@@ -71,7 +83,13 @@ class confirmbooking implements confirmbooking_interface {
 
         $settings = singleton_service::get_instance_of_booking_option_settings($optionid);
         $context = context_module::instance($settings->cmid);
-        if (!has_capability('mod/booking:bookforothers', $context)) {
+        // A supervisor may hold only the restricted "book my team" capability instead of the
+        // unrestricted "book for others". The supervisor / deputy relation is verified below,
+        // so bookmyteam is sufficient to reach that check. Same gate as in subscribeusers.php.
+        if (
+            !has_capability('mod/booking:bookforothers', $context)
+            && !has_capability('mod/booking:bookmyteam', $context)
+        ) {
             return [$approved, $message, $reload]; // Can not approve.
         }
 
