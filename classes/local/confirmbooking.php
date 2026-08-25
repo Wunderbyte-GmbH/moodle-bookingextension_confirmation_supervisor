@@ -44,6 +44,18 @@ class confirmbooking implements confirmbooking_interface {
     public $supervisorteam = false;
 
     /**
+     * Whether the given user is a PE (HR): listed in the confirmation_supervisor_hrusers
+     * setting. Public so other confirmation workflows (e.g. the trainer workflow) can route
+     * PEs through the supervisor workflow instead of their own.
+     *
+     * @param int $userid
+     * @return bool
+     */
+    public static function is_pe(int $userid): bool {
+        return self::is_hr($userid);
+    }
+
+    /**
      * A subplugin can implement it's own way to add ways to allow supervisors to approve requests on waitinglist.
      * If the first value in the aray is true, this means that the test was successful.
      *
