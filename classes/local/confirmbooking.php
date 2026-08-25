@@ -71,7 +71,13 @@ class confirmbooking implements confirmbooking_interface {
 
         $settings = singleton_service::get_instance_of_booking_option_settings($optionid);
         $context = context_module::instance($settings->cmid);
-        if (!has_capability('mod/booking:bookforothers', $context)) {
+        // A supervisor may hold only the restricted "book my team" capability instead of the
+        // unrestricted "book for others". The supervisor / deputy relation is verified below,
+        // so bookmyteam is sufficient to reach that check. Same gate as in subscribeusers.php.
+        if (
+            !has_capability('mod/booking:bookforothers', $context)
+            && !has_capability('mod/booking:bookmyteam', $context)
+        ) {
             return [$approved, $message, $reload]; // Can not approve.
         }
 
