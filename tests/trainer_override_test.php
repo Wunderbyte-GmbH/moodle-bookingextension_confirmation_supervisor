@@ -95,8 +95,21 @@ final class trainer_override_test extends advanced_testcase {
         );
 
         // One trainer confirmation books the answer instantly.
+        $sink = $this->redirectEvents();
         $result = $mutable->action_confirmbooking(0, json_encode(['id' => $answer->baid]));
         $this->assertEquals(1, $result['success'], 'The trainer must be able to confirm.');
+
+        // The confirmed event logs who confirmed whom and which workflow granted it.
+        $events = array_values(array_filter(
+            $sink->get_events(),
+            fn($e) => $e instanceof \mod_booking\event\bookinganswer_confirmed
+        ));
+        $sink->close();
+        $this->assertCount(1, $events);
+        $this->assertEquals($trainer1->id, $events[0]->userid);
+        $this->assertEquals($student1->id, $events[0]->relateduserid);
+        $this->assertEquals('confirmation_trainer', $events[0]->other['approvedby']);
+        $this->assertEquals($answer->baid, $events[0]->other['baid']);
         [$id, $isavailable, $description] = $boinfo->is_available($settings->id, $student1->id, true);
         $this->assertEquals(
             MOD_BOOKING_BO_COND_ALREADYBOOKED,
@@ -223,8 +236,20 @@ final class trainer_override_test extends advanced_testcase {
 
         // Step 1: PE confirms - answer stays on the waiting list.
         $this->setUser($pe1);
+        $sink = $this->redirectEvents();
         $result = $mutable->action_confirmbooking(0, json_encode(['id' => $answer->baid]));
         $this->assertEquals(1, $result['success'], 'PE must be able to perform step 1 of order 2.');
+
+        // The confirmed event logs that the SUPERVISOR workflow (not the trainer) granted PE's step.
+        $events = array_values(array_filter(
+            $sink->get_events(),
+            fn($e) => $e instanceof \mod_booking\event\bookinganswer_confirmed
+        ));
+        $sink->close();
+        $this->assertCount(1, $events);
+        $this->assertEquals($pe1->id, $events[0]->userid);
+        $this->assertEquals($student1->id, $events[0]->relateduserid);
+        $this->assertEquals('confirmation_supervisor', $events[0]->other['approvedby']);
         [$id, $isavailable, $description] = $boinfo->is_available($settings->id, $student1->id, true);
         $this->assertEquals(
             MOD_BOOKING_BO_COND_ONWAITINGLIST,
