@@ -47,7 +47,7 @@ final class listtoapprove_confirmation_order_test extends advanced_testcase {
      * @covers \bookingextension_confirmation_supervisor\local\confirmbooking
      */
     public function test_supervisor_sees_answer_before_hr_confirmation(): void {
-        $env = $this->setup_environment(true);
+        $env = $this->setup_environment('full');
         $student1 = $env['student1'];
         $supervisor1 = $env['supervisor1'];
         $hr1 = $env['hr1'];
@@ -177,7 +177,7 @@ final class listtoapprove_confirmation_order_test extends advanced_testcase {
     public function test_supervisor_without_booking_capabilities(): void {
         global $USER;
 
-        $env = $this->setup_environment(false);
+        $env = $this->setup_environment('none');
         $student1 = $env['student1'];
         $supervisor1 = $env['supervisor1'];
 
@@ -226,7 +226,7 @@ final class listtoapprove_confirmation_order_test extends advanced_testcase {
     public function test_supervisorteam_shortcode_respects_confirmation_order(): void {
         global $PAGE;
 
-        $env = $this->setup_environment(true);
+        $env = $this->setup_environment('full');
         $student1 = $env['student1'];
         $supervisor1 = $env['supervisor1'];
 
@@ -271,7 +271,7 @@ final class listtoapprove_confirmation_order_test extends advanced_testcase {
      * @covers \mod_booking\local\confirmationworkflow\confirmation
      */
     public function test_enabled_trainer_plugin_does_not_break_confirmation_order(): void {
-        $env = $this->setup_environment(true);
+        $env = $this->setup_environment('full');
         $student1 = $env['student1'];
         $supervisor1 = $env['supervisor1'];
         $settings = $env['settings'];
@@ -308,15 +308,149 @@ final class listtoapprove_confirmation_order_test extends advanced_testcase {
     }
 
     /**
+     * A supervisor may hold only the restricted mod/booking:bookmyteam capability instead of
+     * the unrestricted mod/booking:bookforothers. That must be enough to confirm for their own
+     * team - and the confirmation order must still be enforced for them.
+     *
+     * @covers \mod_booking\shortcodes::listtoapprove
+     * @covers \bookingextension_confirmation_supervisor\local\confirmbooking
+     */
+    public function test_supervisor_with_bookmyteam_only(): void {
+        $env = $this->setup_environment('bookmyteam');
+        $student1 = $env['student1'];
+        $supervisor1 = $env['supervisor1'];
+        $hr1 = $env['hr1'];
+        $settings = $env['settings'];
+        $boinfo = $env['boinfo'];
+        $answer = $env['answer'];
+
+        $mutable = new manageusers_table('test_optionstoconfirm_0');
+
+        // It is HR's (PE's) turn: the supervisor sees the row and the waiting hint, but no button.
+        $this->setUser($supervisor1);
+        [$html, $table] = $this->get_table_from_listtoapprove_shortcode();
+        $this->assertNotNull($table, 'A supervisor with bookmyteam should see the answers of their team.');
+        $this->assertEquals(1, $table->totalrows);
+        $this->assertStringContainsString(
+            get_string('needsconfirmationofhr', 'bookingextension_confirmation_supervisor'),
+            $html,
+            'The confirmation order must be enforced for a supervisor holding only bookmyteam.'
+        );
+        $this->assertStringNotContainsString("confirmbooking-username-{$student1->username}", $html);
+        $result = $mutable->action_confirmbooking(0, json_encode(['id' => $answer->baid]));
+        $this->assertEquals(0, $result['success']);
+
+        // HR (PE) confirms first.
+        $this->setUser($hr1);
+        $result = $mutable->action_confirmbooking(0, json_encode(['id' => $answer->baid]));
+        $this->assertEquals(1, $result['success']);
+
+        // Now it is the supervisor's turn: bookmyteam is enough to get the button and confirm.
+        $this->setUser($supervisor1);
+        [$html, $table] = $this->get_table_from_listtoapprove_shortcode();
+        $this->assertNotNull($table);
+        $this->assertStringContainsString(
+            "confirmbooking-username-{$student1->username}",
+            $html,
+            'mod/booking:bookmyteam must be accepted instead of mod/booking:bookforothers.'
+        );
+        $result = $mutable->action_confirmbooking(0, json_encode(['id' => $answer->baid]));
+        $this->assertEquals(1, $result['success'], 'A supervisor with bookmyteam must be able to confirm for their team.');
+
+        [$id, $isavailable, $description] = $boinfo->is_available($settings->id, $student1->id, true);
+        $this->assertEquals(MOD_BOOKING_BO_COND_ALREADYBOOKED, $id);
+    }
+
+    /**
+     * bookmyteam alone must not be enough: the supervisor / deputy relation is still required.
+     * The outsider holds bookmyteam but is neither supervisor nor deputy of student1.
+     *
+     * @covers \bookingextension_confirmation_supervisor\local\confirmbooking
+     */
+    public function test_bookmyteam_without_supervisor_relation(): void {
+        $env = $this->setup_environment('full');
+        $student1 = $env['student1'];
+        $outsider1 = $env['outsider1'];
+        $settings = $env['settings'];
+        $boinfo = $env['boinfo'];
+        $answer = $env['answer'];
+
+        $mutable = new manageusers_table('test_optionstoconfirm_0');
+
+        $this->setUser($outsider1);
+        [$html, $table] = $this->get_table_from_listtoapprove_shortcode();
+        // No relation to student1, so there is nothing to approve for this user.
+        $this->assertNull($table, 'A bookmyteam holder without supervisor relation must not see foreign answers.');
+        $this->assertStringNotContainsString("confirmbooking-username-{$student1->username}", $html);
+
+        $result = $mutable->action_confirmbooking(0, json_encode(['id' => $answer->baid]));
+        $this->assertEquals(0, $result['success'], 'bookmyteam must not allow confirming for users outside the own team.');
+
+        [$id, $isavailable, $description] = $boinfo->is_available($settings->id, $student1->id, true);
+        $this->assertEquals(MOD_BOOKING_BO_COND_ONWAITINGLIST, $id);
+    }
+
+    /**
+     * Side effect of keeping mod/booking:bookforothers as the gate of the trainer subplugin:
+     * a supervisor holding only bookmyteam does not pass the trainer gate, so even on an option
+     * with BOTH workflow flags set the supervisor workflow governs and the order is enforced.
+     *
+     * @covers \bookingextension_confirmation_supervisor\local\confirmbooking
+     * @covers \bookingextension_confirmation_trainer\local\confirmbooking
+     */
+    public function test_bookmyteam_supervisor_on_trainer_flagged_option(): void {
+        // Option json has confirmationtrainerenabled = 1 AND confirmationsupervisorenabled = 2.
+        $env = $this->setup_environment('bookmyteam', 1);
+        $student1 = $env['student1'];
+        $supervisor1 = $env['supervisor1'];
+        $hr1 = $env['hr1'];
+        $settings = $env['settings'];
+        $boinfo = $env['boinfo'];
+        $answer = $env['answer'];
+
+        // The trainer subplugin is enabled site-wide and the option uses the trainer workflow...
+        set_config('confirmationtrainerenabled', 1, 'bookingextension_confirmation_trainer');
+
+        $mutable = new manageusers_table('test_optionstoconfirm_0');
+
+        // ...but the supervisor only holds bookmyteam, so the trainer gate (bookforothers) rejects
+        // them and the supervisor workflow decides: it is HR's (PE's) turn, so no button.
+        $this->setUser($supervisor1);
+        [$html, $table] = $this->get_table_from_listtoapprove_shortcode();
+        $this->assertNotNull($table);
+        $this->assertStringContainsString(
+            get_string('needsconfirmationofhr', 'bookingextension_confirmation_supervisor'),
+            $html,
+            'A bookmyteam-only supervisor must not slip through the trainer gate.'
+        );
+        $this->assertStringNotContainsString("confirmbooking-username-{$student1->username}", $html);
+
+        $result = $mutable->action_confirmbooking(0, json_encode(['id' => $answer->baid]));
+        $this->assertEquals(0, $result['success']);
+
+        [$id, $isavailable, $description] = $boinfo->is_available($settings->id, $student1->id, true);
+        $this->assertEquals(MOD_BOOKING_BO_COND_ONWAITINGLIST, $id);
+
+        // HR (PE) holds bookforothers, so for HR the trainer workflow applies and grants
+        // the confirmation regardless of the order - this documents the OR semantics.
+        $this->setUser($hr1);
+        $result = $mutable->action_confirmbooking(0, json_encode(['id' => $answer->baid]));
+        $this->assertEquals(1, $result['success']);
+    }
+
+    /**
      * Creates course, users, profile fields, configs and a booking option with
      * confirmation order 2 (first HR/PE, then supervisor), and books student1 onto
      * the waiting list.
      *
-     * @param bool $supervisorhasbookingcaps whether the supervisor role gets the booking
-     *                                       capabilities (readresponses, bookforothers, ...)
+     * @param string $supervisorcaps which booking capabilities the supervisor role gets:
+     *                               'full'       => bookforothers + readresponses,
+     *                               'bookmyteam' => bookmyteam + readresponses (no bookforothers),
+     *                               'none'       => no booking capabilities at all.
+     * @param int $trainerflag value of confirmationtrainerenabled in the option json
      * @return array
      */
-    private function setup_environment(bool $supervisorhasbookingcaps): array {
+    private function setup_environment(string $supervisorcaps = 'full', int $trainerflag = 0): array {
         global $CFG, $DB, $USER;
 
         require_once($CFG->dirroot . '/user/profile/lib.php');
@@ -342,6 +476,8 @@ final class listtoapprove_confirmation_order_test extends advanced_testcase {
         $supervisor1 = $this->getDataGenerator()->create_user();
         $hr1 = $this->getDataGenerator()->create_user();
         $bookingmanager = $this->getDataGenerator()->create_user();
+        // Holds bookmyteam, but is neither supervisor nor deputy of student1.
+        $outsider1 = $this->getDataGenerator()->create_user();
 
         // Student 1 reports to supervisor 1.
         profile_save_data((object)['id' => $student1->id, 'profile_field_supervisor' => $supervisor1->id]);
@@ -365,6 +501,7 @@ final class listtoapprove_confirmation_order_test extends advanced_testcase {
             'courseid' => $course->id,
             'chooseorcreatecourse' => 1,
             'waitforconfirmation' => 1,
+            'confirmationtrainerenabled' => $trainerflag,
             'confirmationsupervisorenabled' => 2,
         ]);
 
@@ -380,12 +517,24 @@ final class listtoapprove_confirmation_order_test extends advanced_testcase {
         assign_capability('mod/booking:readresponses', CAP_ALLOW, $approverroleid, SYSCONTEXTID, true);
         role_assign($approverroleid, $hr1->id, $syscontext->id);
 
-        if ($supervisorhasbookingcaps) {
-            role_assign($approverroleid, $supervisor1->id, $syscontext->id);
-        } else {
-            // Like the KSW 'supervisor' role: a system role WITHOUT any mod/booking capabilities.
-            $supervisorroleid = create_role('Supervisor', 'testsupervisor', 'Supervisor without booking capabilities');
-            role_assign($supervisorroleid, $supervisor1->id, $syscontext->id);
+        // Team-only role: the restricted "book my team" capability instead of bookforothers.
+        $teamonlyroleid = create_role('Teamonly', 'teamonly', 'Supervisor with bookmyteam instead of bookforothers');
+        assign_capability('mod/booking:bookmyteam', CAP_ALLOW, $teamonlyroleid, SYSCONTEXTID, true);
+        assign_capability('mod/booking:readresponses', CAP_ALLOW, $teamonlyroleid, SYSCONTEXTID, true);
+        role_assign($teamonlyroleid, $outsider1->id, $syscontext->id);
+
+        switch ($supervisorcaps) {
+            case 'full':
+                role_assign($approverroleid, $supervisor1->id, $syscontext->id);
+                break;
+            case 'bookmyteam':
+                role_assign($teamonlyroleid, $supervisor1->id, $syscontext->id);
+                break;
+            default:
+                // Like the KSW 'supervisor' role: a system role WITHOUT any mod/booking capabilities.
+                $supervisorroleid = create_role('Supervisor', 'testsupervisor', 'Supervisor without booking capabilities');
+                role_assign($supervisorroleid, $supervisor1->id, $syscontext->id);
+                break;
         }
 
         $this->getDataGenerator()->enrol_user($student1->id, $course->id, 'student');
@@ -413,6 +562,7 @@ final class listtoapprove_confirmation_order_test extends advanced_testcase {
             'student1' => $student1,
             'supervisor1' => $supervisor1,
             'hr1' => $hr1,
+            'outsider1' => $outsider1,
         ];
     }
 
