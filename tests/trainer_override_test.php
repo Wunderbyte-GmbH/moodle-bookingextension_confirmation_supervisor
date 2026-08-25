@@ -48,6 +48,27 @@ use stdClass;
  */
 final class trainer_override_test extends advanced_testcase {
     /**
+     * Tests set up.
+     */
+    public function setUp(): void {
+        parent::setUp();
+        // On MariaDB, phpunit resets auto-increments so every test reuses identical ids.
+        // Without destroying the singletons, cached users/answers/settings from a previous
+        // test (same ids!) leak into the next one and distort the confirmation counts.
+        singleton_service::destroy_instance();
+    }
+
+    /**
+     * Mandatory clean-up after each test.
+     */
+    public function tearDown(): void {
+        parent::tearDown();
+        /** @var mod_booking_generator $plugingenerator */
+        $plugingenerator = self::getDataGenerator()->get_plugin_generator('mod_booking');
+        $plugingenerator->teardown();
+    }
+
+    /**
      * A trainer (bookforothers, not in the HR list, no supervisor relation) books instantly
      * with a single confirmation - for every supervisor order and at every stage, even when
      * the supervisor workflow alone would require two confirmations.
